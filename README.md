@@ -1,8 +1,18 @@
 # cpp_game_programming
 SFML and ImGui 2d game engine implementing the Entity Component System (ECS)
 
-## adding ImGui as a submodule
-* git submodule add https://github.com/ocornut/imgui.git external/imgui
+## adding ImGui extenral libraries to clone
+* git https://github.com/ocornut/imgui.git external/imgui
+* git clone https://github.com/SFML/imgui-sfml.git external/imgui branch 2.6.x
+
+* the SFML version should be 2.6.1 in order to work with imgui-sfml
+    - in linux you must compile this version for your system.
+    - cd SFML-2.6.1
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make -j$(nproc)
+    - sudo make install
 
 ## compile and run using configured the Makefile. 
 * make run
@@ -56,3 +66,4 @@ Each line of the configuration file specifies one of the config settings of the 
     - SX SY : initial speed (float x, float y)
     - R, G, B : color (int r, int g, int b)
     - R : radius
+
