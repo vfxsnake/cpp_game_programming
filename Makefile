@@ -1,17 +1,19 @@
+# this make file is meant to be used with x64 native tools command prompt.
+# the compiler uses cl.exe targeting the x64 architecture.
 # for compiling and running at once type
 # make run
+# for cleaning:
+# make clean
 
 # define which compiler to use
-CXX := g++
 OUTPUT := sfmlgame
 OS := $(shell uname)
+BIN_DIR := ./bin
 
-# Linux compiler and linker flags
-ifeq ($(OS), Linux)
-	CXX_FLAGS := -O3 -std=c++20 -Wno-unused-result -Wno-deprecated-declarations
-	INCLUDES := -I./src -I./external/imgui -I./external/imgui-sfml -I/usr/include/SFML
-	LDFLAGS := -O3 -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio -lGL -lGLEW -ldl
-endif
+CXX := cl
+CXX_FLAGS := /O2 /EHsc /std:c++20 /W3 /D "WIN64"
+INCLUDES := /I "./src" /I "./external/imgui" /I "./external/imgui-sfml" /I "C:/DEV/SFML_2.6.1/include"
+LDFLAGS := /link /LIBPATH:"C:/DEV/SFML_2.6.1/lib" sfml-graphics.lib sfml-window.lib sfml-system.lib sfml-audio.lib opengl32.lib gdi32.lib winmm.lib
 
 # Define source and object files
 SRC_FILES := $(wildcard src/*.cpp external/imgui/*.cpp external/imgui-sfml/*.cpp)
@@ -21,20 +23,26 @@ OBJ_FILES := $(SRC_FILES:.cpp=.o)
 DEP_FILES := $(SRC_FILES:.cpp=.d)
 -include $(DEP_FILES)
 
-all: $(OUTPUT)
+all: $(BIN_DIR)/$(OUTPUT).exe
+
+# Ensure the bin directory exists
+$(BIN_DIR):
+	mkdir $(BIN_DIR)
 
 # Link the output binary
-$(OUTPUT): $(OBJ_FILES) Makefile
-	$(CXX) $(OBJ_FILES) $(LDFLAGS) -o ./bin/$@
+$(BIN_DIR)/$(OUTPUT).exe: $(OBJ_FILES) | $(BIN_DIR)
+	$(CXX) $(OBJ_FILES) $(LDFLAGS) /OUT:$@
 
 # Compile source files into object files
 %.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
+	$(CXX) $(CXX_FLAGS) $(INCLUDES) /c $< /Fo$@
 
 # Clean build artifacts
 clean:
-	rm -f $(OBJ_FILES) $(DEP_FILES) ./bin/$(OUTPUT)
+	-@del /Q $(subst /,\,$(OBJ_FILES))
+	-@del /Q $(subst /,\,$(DEP_FILES))
+	-@del /Q $(subst /,\,$(BIN_DIR)/$(OUTPUT).exe)
 
 # Run the compiled binary
-run: $(OUTPUT)
-	cd bin && ./$(OUTPUT) && cd ..
+run: $(BIN_DIR)/$(OUTPUT).exe
+	cd bin && $(OUTPUT).exe && cd ..
