@@ -174,6 +174,17 @@ int main(int argc, char* argv[])
     ImGui::GetIO().FontGlobalScale = 2.0; 
     */
 
+   int comboBoxIndex = 0;
+   std::vector<const char*> shapeNameArray;
+   for (Circle& c : circles)
+   {
+        shapeNameArray.push_back(c.Name.c_str());
+   }
+   for (Rectangle& r : rectangles)
+   {
+        shapeNameArray.push_back(r.Name.c_str());
+   }
+
     // main loop
     while (window.isOpen())
     {
@@ -196,16 +207,46 @@ int main(int argc, char* argv[])
         ImGui::SFML::Update(window, deltaClock.restart());
         
         // draw the ui
-        ImGui::ShowDemoWindow();
         ImGui::Begin("Window title");
-        ImGui::Text("Contro Window");
-        // ImGui::Checkbox("Draw Circle", &circle.Draw);
-        // ImGui::SameLine();
-        // ImGui::Checkbox("Draw Text", &drawText);
-        // ImGui::SliderFloat("Radius", &circleRadius, 0.0f, 300.0f);
-        // ImGui::SliderInt("Sides", &circleSegments, 3, 64);
-        // ImGui::ColorEdit3("Color Circle", c);
-        // ImGui::InputText("Text", displayString, 255);
+        ImGui::Text("Control Window");
+
+        ImGui::Combo("shape", &comboBoxIndex, shapeNameArray.data(), shapeNameArray.size());
+
+        // collecting attributes to populate the gui
+        bool draw;
+        float scale;
+        float velocity[2];
+        float color[3];
+        char name[255];
+        if (comboBoxIndex < circles.size())
+        {
+            draw = circles[comboBoxIndex].Draw;
+            scale = circles[comboBoxIndex].Shape.getScale().x;
+            velocity[0] = circles[comboBoxIndex].Velocity.x;
+            velocity[1] = circles[comboBoxIndex].Velocity.y;
+            color[0] = circles[comboBoxIndex].Shape.getFillColor().r / 255;
+            color[1] = circles[comboBoxIndex].Shape.getFillColor().g / 255;
+            color[2] = circles[comboBoxIndex].Shape.getFillColor().b / 255;
+            std::strncpy(name, circles[comboBoxIndex].Name.c_str(), 255);
+        }   
+        else
+        {
+            draw = rectangles[comboBoxIndex - circles.size()].Draw;
+            scale = rectangles[comboBoxIndex - circles.size()].Shape.getScale().x;
+            velocity[0] = rectangles[comboBoxIndex - circles.size()].Velocity.x;
+            velocity[1] = rectangles[comboBoxIndex - circles.size()].Velocity.y;
+            color[0] = rectangles[comboBoxIndex - circles.size()].Shape.getFillColor().r / 255.0f;
+            color[1] = rectangles[comboBoxIndex - circles.size()].Shape.getFillColor().g / 255.0f;
+            color[2] = rectangles[comboBoxIndex - circles.size()].Shape.getFillColor().b / 255.0f;
+            std::strncpy(name, rectangles[comboBoxIndex - circles.size()].Name.c_str(), 255);
+        }
+
+        ImGui::Checkbox("Draw shape", &draw);
+        
+        ImGui::SliderFloat("Scale", &scale, 0.0f, 4.0f);
+        ImGui::SliderFloat2("Velocity", velocity, -8.0, 8.0);
+        ImGui::ColorEdit3("Shape Color", color);
+        ImGui::InputText("display Name", name, 255);
         // if(ImGui::Button("set Text"))
         // {
         //     text.setString(displayString);
@@ -217,11 +258,24 @@ int main(int argc, char* argv[])
         // }
         ImGui::End();
 
-        // update shape values
-        // circle.Shape.setPointCount(circleSegments);
-        // circle.Shape.setRadius(circleRadius);
-        // circle.Shape.setFillColor(sf::Color(sf::Uint8(c[0]*255), sf::Uint8(c[1]*255), sf::Uint8(c[2]*255)));
-        // circle.Shape.setPosition(circle.Shape.getPosition().x + circle.Velocity.x, circle.Shape.getPosition().y + circle.Velocity.y);
+        //  updating values to the selected shape.
+        if (comboBoxIndex < circles.size())
+        {
+            circles[comboBoxIndex].Draw = draw;
+            circles[comboBoxIndex].Shape.setScale(scale, scale);
+            circles[comboBoxIndex].Velocity = sf::Vector2(velocity[0], velocity[1]);
+            circles[comboBoxIndex].Shape.setFillColor(sf::Color(sf::Uint8(color[0]*255), sf::Uint8(color[1]*255), sf::Uint8(color[2]*255)));
+            circles[comboBoxIndex].Name = std::string(name);
+        }
+        else
+        {
+            rectangles[comboBoxIndex - circles.size()].Draw = draw;
+            rectangles[comboBoxIndex - circles.size()].Shape.setScale(scale, scale);
+            rectangles[comboBoxIndex - circles.size()].Velocity = sf::Vector2(velocity[0], velocity[1]);
+            rectangles[comboBoxIndex - circles.size()].Shape.setFillColor(sf::Color(sf::Uint8(color[0]*255), sf::Uint8(color[1]*255), sf::Uint8(color[2]*255)));
+            rectangles[comboBoxIndex - circles.size()].Name = std::string(name);
+        }
+
 
 
         window.clear();
@@ -229,11 +283,11 @@ int main(int argc, char* argv[])
         for (Circle& c : circles)
         {
             // update velocity if positionis out of bounce
-            if (c.Shape.getPosition().x < 0 || c.Shape.getPosition().x + (c.Shape.getRadius() * 2) > windowWidth)
+            if (c.Shape.getPosition().x < 0 || c.Shape.getPosition().x + c.Shape.getGlobalBounds().getSize().x  > windowWidth)
             {
                 c.Velocity.x *= -1.0f;
             }
-            if (c.Shape.getPosition().y < 0 || c.Shape.getPosition().y + (c.Shape.getRadius() * 2) > windowHeight)
+            if (c.Shape.getPosition().y < 0 || c.Shape.getPosition().y + c.Shape.getGlobalBounds().getSize().y > windowHeight)
             {
                 c.Velocity.y *= -1.0f;
             }
@@ -241,22 +295,24 @@ int main(int argc, char* argv[])
             c.Shape.setPosition(c.Shape.getPosition() + c.Velocity);
             sf::Text text(c.Name, myFont, fontSize);
             sf::Vector2f textCenter = text.getGlobalBounds().getSize() / 2.0f;
-            text.setPosition(c.Shape.getPosition().x + c.Shape.getRadius() - textCenter.x, 
-                             c.Shape.getPosition().y + c.Shape.getRadius() - textCenter.y );
-            char displayString[255] = "sample Text";
-            window.draw(c.Shape);
-            window.draw(text);
+            text.setPosition(c.Shape.getPosition().x + c.Shape.getGlobalBounds().getSize().x / 2.0f - textCenter.x, 
+                             c.Shape.getPosition().y + c.Shape.getGlobalBounds().getSize().y / 2.0f - textCenter.y );
+            if (c.Draw)
+            {
+                window.draw(c.Shape);
+                window.draw(text);
+            }
         }
 
 
         for (Rectangle& r : rectangles)
         {
             // update velocity if positionis out of bounce
-            if (r.Shape.getPosition().x < 0 || r.Shape.getPosition().x + r.Shape.getSize().x > windowWidth)
+            if (r.Shape.getPosition().x < 0 || r.Shape.getPosition().x + r.Shape.getGlobalBounds().getSize().x  > windowWidth)
             {
                 r.Velocity.x *= -1.0f;
             }
-            if (r.Shape.getPosition().y < 0 || r.Shape.getPosition().y + r.Shape.getSize().y > windowHeight)
+            if (r.Shape.getPosition().y < 0 || r.Shape.getPosition().y + r.Shape.getGlobalBounds().getSize().y > windowHeight)
             {
                 r.Velocity.y *= -1.0f;
             }
@@ -264,15 +320,13 @@ int main(int argc, char* argv[])
             sf::Text text(r.Name, myFont, fontSize);
             sf::Vector2f textCenter = text.getGlobalBounds().getSize() / 2.0f;
             text.setPosition(r.Shape.getPosition().x + (r.Shape.getSize().x / 2.0f) - textCenter.x, 
-                             r.Shape.getPosition().y + (r.Shape.getSize().y / 2.0f) - textCenter.y - fontSize * 0.25 );
-            window.draw(r.Shape);
-            window.draw(text);
+                             r.Shape.getPosition().y + (r.Shape.getSize().y / 2.0f) - textCenter.y - fontSize * 0.25f );
+            if (r.Draw)
+            {
+                window.draw(r.Shape);
+                window.draw(text);
+            }
         }
-        // if (drawText)
-        // {
-        //     window.draw(text);
-        // }
-
         ImGui::SFML::Render(window);
         window.display();
     } 
