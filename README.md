@@ -20,9 +20,9 @@ SFML and ImGui 2d game engine implementing the Entity Component System (ECS)
 ### gp-4300_assigment_1 branch
 
 Program Specification
-this assignment will wirte a C++/SFML program.
-* read the descriptions of shapes (spheres and rectangles) from a config file.
-* draw the shapes to scree.
+this assignment will write a C++/SFML program.
+* read the descriptions of shapes (spheres and rectangles), window and font from a config file.
+* draw the shapes to screen.
 * each shape will have a name, position, speed, color, and properties uniques for each shape:
     - Rectangles will have width and height.
     - Circles will have Radius.
@@ -30,7 +30,7 @@ this assignment will wirte a C++/SFML program.
 * the shape should move along the x and y axis of the screen and they should bounce
     when the reach the limits of the the window.
 * the center of the text (name of the shape ) should be at center of the shape.
-* the program must have implemented a ImGui interface with the following requirements:
+<!-- * the program must have implemented a ImGui interface with the following requirements:
     - List all shapes and select in a combo box.
     - the shape selected will populate the ui info so the ui can edit the values.
     - the ui requires a checkbox for toggling the visibility fo the shape (draw).
@@ -38,7 +38,7 @@ this assignment will wirte a C++/SFML program.
     - a slider for x velocity with a range from -8 to 8.
     - a slider for y velocity with a range from -8 to 8.
     - a color widget to change the color of the shape.
-    - a text field to change the name of the shape.
+    - a text field to change the name of the shape. -->
 
 ### Config file interpretation:
 
