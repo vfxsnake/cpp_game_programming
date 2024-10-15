@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <SFML/Graphics.hpp>
+#include "Vec2.hpp"
 #include "imgui.h"
 #include "imgui-SFML.h"
 
