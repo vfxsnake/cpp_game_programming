@@ -1,6 +1,7 @@
 #include "Game.h"
 
 #include <iostream>
+#include <fstream>
 
 Game::Game(const std::string &config)
 {
@@ -10,11 +11,83 @@ Game::Game(const std::string &config)
 void Game::init(const std::string &path)
 {
     // TODO: read in config file here. 
+    int width, height, maxFPS;
+    bool fullScreenMode;
+    std::string fontPath;
+    int fontColor[3];
 
+    std::ifstream fileIn(path);
+    std::string objectType;
+    while (fileIn >> objectType)
+    {
+        if (objectType == "Window")
+        {
+            fileIn >> width
+                   >> height
+                   >> maxFPS
+                   >> fullScreenMode;
+        }
+
+        if (objectType == "Font")
+        {
+            fileIn >> fontPath
+                   >> fontColor[1]
+                   >> fontColor[2]
+                   >> fontColor[3]; 
+        }
+
+        if (objectType == "Player")
+        {
+            fileIn >> m_playerConfig.SR
+                   >> m_playerConfig.CR
+                   >> m_playerConfig.S
+                   >> m_playerConfig.FR       
+                   >> m_playerConfig.FG       
+                   >> m_playerConfig.FB
+                   >> m_playerConfig.OR       
+                   >> m_playerConfig.OG       
+                   >> m_playerConfig.OB
+                   >> m_playerConfig.OT       
+                   >> m_playerConfig.V;       
+        }
+
+        if (objectType == "Enemy")
+        {
+            fileIn >> m_enemyConfig.SR
+                   >> m_enemyConfig.CR
+                   >> m_enemyConfig.SMin
+                   >> m_enemyConfig.SMax
+                   >> m_enemyConfig.OR
+                   >> m_enemyConfig.OG
+                   >> m_enemyConfig.OB
+                   >> m_enemyConfig.OT
+                   >> m_enemyConfig.VMIN
+                   >> m_enemyConfig.VMAX
+                   >> m_enemyConfig.L
+                   >> m_enemyConfig.SI;
+        }
+        
+        if (objectType == "Bullet")
+        {
+            fileIn >> m_bulletConfig.SR
+                   >> m_bulletConfig.CR
+                   >> m_bulletConfig.S
+                   >> m_bulletConfig.FR
+                   >> m_bulletConfig.FG
+                   >> m_bulletConfig.FB
+                   >> m_bulletConfig.OR
+                   >> m_bulletConfig.OG
+                   >> m_bulletConfig.OB
+                   >> m_bulletConfig.OT
+                   >> m_bulletConfig.V
+                   >> m_bulletConfig.L;
+        }
+
+    }
+    
     // window parameters
-
-    m_window.create(sf::VideoMode(1280, 720), "Assignment 2");
-    m_window.setFramerateLimit(60);
+    m_window.create(sf::VideoMode(width, height), "Assignment 2");
+    m_window.setFramerateLimit(maxFPS);
 
     ImGui::SFML::Init(m_window);
 
@@ -22,6 +95,8 @@ void Game::init(const std::string &path)
     ImGui::GetStyle().ScaleAllSizes(2.0f);
     ImGui::GetIO().FontGlobalScale = 2.0f;
 
+    // global random seed.
+    srand(time(NULL));
     spawnPlayer();
 }
 
@@ -59,15 +134,22 @@ void Game::spawnPlayer()
 {
     // TODO: Finish adding all properties fo the player with the correct values 
     // getting the player form the entity manager.
+    Vec2 win_size = m_window.getSize();
+
     auto entity = m_entities.addEntity("player");
 
     // adding transform component to the player
-    entity->add<CTransform>(Vec2(200.f, 200.0f), Vec2f(1.0f, 1.0f), 0.0f);
+    entity->add<CTransform>(Vec2f(win_size.x / 2.0f, win_size.y / 2.0f), Vec2f(1.0f, 1.0f), 0.0f);
 
-    entity->add<CShape>(32.0f, 8, sf::Color(10,10,10), sf::Color(255, 0, 0), 4.0f);
+    entity->add<CShape>(
+            m_playerConfig.SR, 
+            m_playerConfig.V, 
+            sf::Color(m_playerConfig.FR, m_playerConfig.FG, m_playerConfig.FB), 
+            sf::Color(m_playerConfig.OR, m_playerConfig.OG, m_playerConfig.OB),
+            m_playerConfig.OT
+        );
 
     entity->add<CInput>();
-
 }
 
 
@@ -75,6 +157,28 @@ void Game::spawnEnemy()
 {
     // TODO: enemies should be spawned with in the boundaries of the screen and withe the config settings.
 
+    Vec2 win_size = m_window.getSize();
+    float max_spawn_threshold_position_x = win_size.x - m_enemyConfig.SR;
+    float max_spawn_threshold_position_y = win_size.y - m_enemyConfig.SR;
+
+    float rand_position_x = m_enemyConfig.SR + (rand() % static_cast<int>(max_spawn_threshold_position_x - m_enemyConfig.SR + 1));
+    float rand_position_y = m_enemyConfig.SR + (rand() % static_cast<int>(max_spawn_threshold_position_y - m_enemyConfig.SR + 1) );
+
+    int number_of_points = m_enemyConfig.VMIN + (rand() % (m_enemyConfig.VMAX - m_enemyConfig.VMIN + 1));
+    float rotation = rand() % 45;
+    float velocity_x = (rand() % 100) -50;
+    float velocity_y = (rand() % 100) -50;
+    float velocity_scale = m_enemyConfig.SMin + (rand() % static_cast<int>(m_enemyConfig.SMax - m_enemyConfig.SMin + 1));
+    auto enemy = m_entities.addEntity("enemy");
+    Vec2f velocity = Vec2(velocity_x, velocity_y).normalize() * velocity_scale;
+    enemy->add<CTransform>(Vec2f(rand_position_x, rand_position_y), velocity, rotation);
+    enemy->add<CShape>( 
+                m_enemyConfig.SR,
+                number_of_points,
+                sf::Color(0, 0, 0),
+                sf::Color(m_enemyConfig.OR, m_enemyConfig.OG, m_enemyConfig.OB),
+                m_enemyConfig.OT
+            );
     // record the last frame an enemy was spawned.
     m_lastEnemySpawnTime = m_currentFrame;
 }
@@ -102,8 +206,50 @@ void Game::sMovement()
 {
     // TODO: implement all entity movements in this function
     // ** sample movement speed update
-    auto& transform = player()->get<CTransform>();
-    transform.pos += transform.velocity;
+
+    for (auto entity : m_entities.getEntities())
+    {
+        // player movement logic
+        if (entity->tag() == "player")
+        {
+            auto& player_transform = player()->get<CTransform>();
+            auto& player_input = player()->get<CInput>();
+            if (player_input.left)
+            {
+                player_transform.velocity.x = -1;
+            }
+            else if (player_input.right)
+            {
+                player_transform.velocity.x = 1;
+            }
+            else 
+            {
+                player_transform.velocity.x = 0;
+            }
+
+            if (player_input.up)
+            {
+                player_transform.velocity.y = -1;
+            }
+            else if (player_input.down)
+            {
+                player_transform.velocity.y = 1;
+            }
+            else
+            {
+                player_transform.velocity.y = 0;
+            }
+
+            if (player_transform.velocity.magnitude() != 0)
+            {
+                player_transform.pos += player_transform.velocity.normalize()  * m_playerConfig.S;
+            }
+        }
+
+        
+        auto& transform = entity->get<CTransform>();
+        transform.pos += transform.velocity;
+    }
 }
 
 void Game::sLifespan()
@@ -135,6 +281,11 @@ void Game::sCollision()
 void Game::sEnemySpawner()
 {
     // TODO: implement enemy spawning 
+    if ((m_currentFrame - m_lastEnemySpawnTime) % m_enemyConfig.SI == 0)
+    {
+        spawnEnemy();
+    }
+
 }
 
 void Game::sGUI()
@@ -149,11 +300,13 @@ void Game::sRender()
     // TODO: change the code bellow to draw all entities
 
     m_window.clear();
-    player()->get<CShape>().circle.setPosition(player()->get<CTransform>().pos);
-    player()->get<CTransform>().angle += 1.0f;
-    player()->get<CShape>().circle.setRotation(player()->get<CTransform>().angle);
-
-    m_window.draw(player()->get<CShape>().circle);
+    for (auto entity : m_entities.getEntities())
+    {
+        entity->get<CShape>().circle.setPosition(entity->get<CTransform>().pos);
+        entity->get<CTransform>().angle += 1.0f;
+        entity->get<CShape>().circle.setRotation(entity->get<CTransform>().angle);
+        m_window.draw(entity->get<CShape>().circle);
+    }
 
     ImGui::SFML::Render(m_window);
 
@@ -175,13 +328,22 @@ void Game::sUserInput()
 
         if (event.type == sf::Event::KeyPressed)
         {
+            auto& c_input = player()->get<CInput>();
             switch (event.key.code)
             {
             case sf::Keyboard::W:
-                std::cout << "W key pressed\n";
                 // TODO: set players input component "up" to true
+                c_input.up = true;
                 break;
-            
+            case sf::Keyboard::S:
+                c_input.down = true;
+                break;
+            case sf::Keyboard::A:
+                c_input.left = true;
+                break;
+            case sf::Keyboard::D:
+                c_input.right = true;
+                
             default:
                 break;
             }
@@ -190,13 +352,21 @@ void Game::sUserInput()
 
         if (event.type == sf::Event::KeyReleased)
         {
+            auto& c_input = player()->get<CInput>();
             switch (event.key.code)
             {
             case sf::Keyboard::W:
-                std::cout << "W key released\n";
                 // TODO: set players input component "up" to false
+                c_input.up = false;
                 break;
-            
+            case sf::Keyboard::S:
+                c_input.down = false;
+                break;
+            case sf::Keyboard::A:
+                c_input.left = false;
+                break;
+            case sf::Keyboard::D:
+                c_input.right = false;
             default:
                 break;
             }
@@ -213,13 +383,13 @@ void Game::sUserInput()
             if (event.mouseButton.button == sf::Mouse::Left)
             {
                 std::cout << "left Mouse button clicked at (" << event.mouseButton.x << ", " << event.mouseButton.y << ")" << "\n";
-                // calling spawn bullet here
+                spawnBullet(player(), Vec2f());
             }
 
             if (event.mouseButton.button == sf::Mouse::Right)
             {
                 std::cout << "right Mouse Button clicked at (" << event.mouseButton.x << ", " << event.mouseButton.y << ")"  <<"\n";
-                // call spawn Special Weapon here.
+                spawnSpecialWeapon(player());
             }
 
 

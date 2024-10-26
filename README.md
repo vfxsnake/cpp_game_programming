@@ -14,120 +14,122 @@ SFML and ImGui 2d game engine implementing the Entity Component System (ECS)
 
 ### gp-4300_A2 branch
 
+----------------------------------------------------------------
 Program Specification
+----------------------------------------------------------------
 
-for all entities the position is set to the center position of the shape.
+In this assignment you will be writing the game that was presented in class.
+This game must have the following features:
 
-* Player:
-    - the player is represented by a shape defined in the config file
-    - there should be one and only one player at the time (it should be cleaned after dead).
-    - the player mus spawn in the center of the screen at the beginning of the game
-      and after it des.
-    - the player dies when collide with enemies or enemies debris.
-    - the player moves by a speed red from the config file.
-    - the available player movements are:
-        Up (W key), Left (A key), Down (s key), Right (D key).
-    - the player movement is constrained to the dimensions of the screen.
-    - the player should shoot a bullet toward the mouse pointer when the left mouse
-      button is clicked. the speed, size and lifespan of the bullets is read from the config file.
-    - *lifespan should drive the transparency of the object. so it slowly disappear.
+Player:
+- The player is represented by a shape which is defined in the config file
+- The player must spawn in the center of the screen at the beginning of the game, and after it dies (collides with an enemy)
+- The player moves by a speed read from the config file in these directions:
+  Up: W key, Left: A key, Down: S key, Right: D key
+- The player is confined to move only within the bounds of the window
+- The player will shoot a bullet toward the mouse pointer when the left mouse button is clicked. The speed, size, and lifespan of the bullets are read from the config file.
 
-* Special Ability
-    - a free to implement ability, this special move should be fire by the right click of the mouse
-    - multiple entities must be fired
-    - a unique graphic should be used
-    - a unique game mechanic is introduced via a new component.
-    - a cool down timer must be implemented for the special weapon.
-    - the properties of the special ability are not indicated in the config file.
+Special Ability
+- You are free to come up with your own 'special move' which is fired by the player when the right mouse button is clicked. This special ability must:
+- Multiple entities (bullets etc.) spawned by special weapon
+- Entities have some unique graphic associate with them
+- A unique game mechanic is introduced via a new component
+- A 'cool-down timer' must be implemented for the special weapon
+The properties of the special move are not in the config file.
 
-* Enemy(s)
-    - enemies will spawn in a random location on the screen every x frames specified in the config file.
-    - the enemy should be spawn in a valid region into the screen.
-    - Enemies should have random number of vertices between a min and max defined in the config file.
-    - Enemies will be given a random color upon spawning.
-    - Enemies will be given a random speed upon spawning with in a min and max defined in the config.
-    - Enemies must bounce when reaching the edges of the screen.
-    - when large enemies collides with bullets or player, the are destroyed, and N small enemies spawn in
-      it's place, N should be the number of vertices of the original shape, each debris should be 
-      the same number of vertices form the original shape. the velocity direction should be 360/N around
-      the center of the original shape. no specification for the velocity length.
-    
-* Score:
-    - each time an anemy spawns, it is given a score component of N* 100,
-    - small debris will have N*2*100.
-    - if a bulled from the player kills an enemy, the game scores is increased by the score for the killed enemies.
-    - the score should be displayed wit the font specified by the config file,the position of the score is the 
-      top-left corner of the screen.
+Enemy(s):
+- Enemies will spawn in a random location on the screen every X frames, where X is defined in the configuration file.
+- Enemies must not overlap the sides of the screen at the time of spawn.
+- Enemies shapes have random number of vertices, between a given minimum and maximum number, which is specified in the config file.
+- Enemy shape radius will be specified in the configuration file.
+- Enemies will be given a random color upon spawning.
+- Enemies will be given a random speed upon spawning, between a minimum and maximum value specified in the config file.
+- When an enemy reaches the edge of the window, it should bounce off in the opposite direction at the same speed.
+- When (large) enemies collide with a bullet or player, they are destroyed, and N small enemies spawn in its place, where N is the number of vertices of the original enemy. Each small enemy must have the same number of vertices and color of the original enemy. These small entities travel outward at angles at a fixed intervals equal to (360 / vertices). For example, if the original enemy had 6 sides, the 6 smaller enemies will travel outward in intervals of (360/6) = 60 degrees.
 
-* Drawing:
-    - in the render system, all entities should be given a slow rotation which makes the game look nicer.
-    - Any special effects which do not alter game play can be added (sound fx or so.)
-    - Any entity with a life spawn is considered alive, it should have its color alpha channel set to a ratio
-      from 0 to 1 depending how mutch time has left.
-    
-* GUI:
-    - must use ImGui 
-    - list of entities showing id, tag,and position.
-    - additional list of entities by tag.
-    - each element in the list should have a method or button to delete it.
-    - the UI most control the spawning interval time.
-    - a button or method to spawn enemies on demand.
-    - the ui should be simple to use and visually clean.
-    - Note* it could use tabs for clarity:
-        - system tab contains:
-            - checkbox for stopping movements calculations.
-            - checkbox for stopping life spawn calculations.
-            - checkbox for stopping automatic spawning.
-            - slider to change spawn interval.
-            - button for manually spawning.
-            - button for stopping rendering.
-        - entity manager tab contains:
-            - similar to a tree view listing all entities.
-            - sub trees grouping entities by tag (bullets,enemies, player, small)
-            - all entities list, showing the list of all entities.
-            - each entity entry should have a button for destroing it. 
-            - each entity will show id(int), str name, tuple(int, int)position, 
+Score:
+- Each time an enemy spawns, it is given a score component of N*100, where N is the number of vertices it has. Small enemies have double this value.
+- If a player bullet kills an enemy, the game score is increased by the score component of the enemy killed.
+- The score should be displayed with the font specified by the config file in the top-left corner of the screen
 
-* Misc:
-    - 'P' key pauses the game.
-    - 'ESC' closes the game.
+Drawing:
+- In the render system, all entities should be given a slow rotation, which makes the game look a little nicer.
+- Any special effects which do not alter game play can be added for up to 5% bonus marks on the assignment. Note that assignments cannot go above 100% total marks, but the 5% bonus can overwrite any marks lost in other areas of the assignment.
+- Any Entity with a lifespan is currently alive, it should have its Color alpha channel set to a ration depending on how long it has left to live. For example, if an Entity has an 80 frame life span, and 25 frames remaining, its alpha value should be set to (float)25/80*255. The alpha should go from 255 when it is first spawned, to 0 on the last frame it is alive.
 
-### Config file interpretation:
+GUI:
+- You must construct a GUI using ImGui which has the following functionality:
+- The GUI must display options to turn off each system independently
+- For each entity in the game, the GUI must list the ID, tag, and position of that entity. You must display a list of all entities, as well as lists of entities by their tag. You must also have some way of destroying a given entity by interacting with the UI element associated with it.
+- You must be able to change the enemy spawn interval through the GUI
+- You must be able to manually spawn enemies in some way through the GUI
+- You may develop the GUI in any way that contains this functionality, but it must be easily usable and clearly presented to get full marks.
 
-Each line of the configuration file specifies one of the config settings of the program, starting with the type:
-** note that the order of the types can vary.
+Misc:
+- The 'P' key should pause the game
+- The 'ESC' key should close the game
 
-* Window W H FL FS
-    - Declares a SFML Window size (width and height).
-    - FL int (frame limit)
-    - FS bool/int (0,1) full screen mode 1 or not 0.
+Configuration File:
 
-* Player SR CR S FR FG FB OR OG OB OT V
-    - Shape Radius SR int
-    - Collision Radius CR int
-    - Speed S float
-    - Fill Color FR, FG, FB int, int, int
-    - Outline Color OR, OG, OB int, int, int
-    - Outline Thickness OT int
-    - Shape Vertices V int
+The configuration file will have one line each specifying the window size, font format, player, bullet specification, and enemy specifications. Lines will be given in that order, with the following syntax:
 
-* Enemy SR SC SMIN SMAX OR OG OB OT VMin VMax L SI
-    - Shape Radius SR int
-    - Collision Radius CR int
-    - Min Max speed SMIN, SMAX float float
-    - Outline Color OR OG OB int, int, int
-    - Outline Thickness OT int
-    - Min Max Vertices VMIN, VMAX int , int
-    - Small Lifespan L int
-    - Spawn Interval SI int
+Window W H FL FS
+- This line declares that the SFML Window must be constructed with width W and height H, each of which will be integers. FL is the frame limit that the window should be set to, and FS will be an integer which specifies whether to display the application in full-screen mode (1) or not (0).
 
-* Bullet Sr CR S FR FG FB OR OG OB OT V L
-    - Shape Radius SR int
-    - Collision Radius CR int
-    - Min Max speed SMIN, SMAX float float
-    - Fill Color FR, FG, FB int, int, int
-    - Outline Color OR, OG, OB int, int, int
-    - Outline Thickness OT int
-    - Shape Vertices V int
-    - Small Lifespan L int
+Font F S R G B
+- This line defines the font which is to be used to draw text for this program. The format of the line is as follows:
+Font File   F       std::string (it will have no spaces)
+Font Size   S       integers
+RGB color   (R,G,B) int, int, int
 
+Player Specification:
+Player SR CR S FR FG FB OR OG OB OT V
+Shape Radius      SR        int
+Collision Radius  CR        int
+Speed             S         float
+Fill Color        FR,FG,FB  int,int,int
+Outline Color     OR,OG,OB  int,int,int
+Outline Thickness OT        int
+Shape vertices    V         int
+
+Enemy Specification:
+Enemy SR CR SMIN SMAX OR OG OB OT VMIN VMAX L SI
+Shape Radius      SR        int
+Collision Radius  CR        int
+Min/Max Speed     SMIN,SMAX float,float
+Outline Color     OR,OG,OB  int,int,int
+Outline Thickness OT        int
+Min/Max vertices  VMIN,VMAX int,int
+Small Lifespan    L         int
+Spawn interval    SI        int
+
+Bullet Specification:
+Player SR CR S FR FG FB OR OG OB OT V L
+Shape Radius      SR        int
+Collision Radius  CR        int
+Speed             S         float
+Fill Color        FR,FG,FB  int,int,int
+Outline Color     OR,OG,OB  int,int,int
+Outline Thickness OT        int
+Shape vertices    V         int
+Lifespan          L         int
+
+----------------------------------------------------------------
+Assignment Hints
+----------------------------------------------------------------
+I recommend approaching this assignment in the following order:
+
+0. Save the configuration file reading until later, after Entities implemented
+1. Implement the Vec2 class, which you will use for all Components
+2. Implement the basic functionality in the EntityManager class. Implement the EntityManager's addEntity() and update() functions so you can start testing the Game class quickly. Don't worry about the update() function which deletes dead entities until later when you get more game mechanics working.
+3. Implement basics of the Game class:
+  3.1. Construct a player Entity using the spawn Player() function
+  3.2. Implement basic drawing of entities using the Game::sRender() function
+  3.3. Construct some enemies using the spawnEnemy() function
+  3.4. Construct a bullet using the spawnBullet() function
+4. Implement Player Movement in Game::sUserInput and Game::sMovement
+5. Implement the EntityManager::update() function so it deletes dead entities
+6. Implement the EntityManager::getEntities(tag) functionality
+7. Implement collisions in sCollision and entity.destroy() if it's dead
+8. Implement the rest of the game's functionality, including config file reading
+9. Implement the GUI functionality. You may however want to implement the GUI functionality earlier to help you debug your program, it's up to you.

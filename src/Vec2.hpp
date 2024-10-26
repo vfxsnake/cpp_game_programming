@@ -99,6 +99,21 @@ public:
         Vec2 delta = rhs - *this;
         return sqrt((delta.x * delta.x) + (delta.y * delta.y));
     }
+
+    float magnitude()
+    {
+        return sqrt((x*x) + (y*y));
+    }
+
+    Vec2 normalize()
+    {
+        if (magnitude() == 0)
+        {
+            return Vec2(0, 0);
+        }
+        return Vec2(x / magnitude(), y / magnitude());
+    }
+
 };
 
 using Vec2f = Vec2<float>;  // similar to a macro a way to aliases a Vec2f float easily.
