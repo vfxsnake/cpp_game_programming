@@ -12,7 +12,8 @@ using ComponentTuple = std::tuple<
     CShape,
     CCollision,
     CInput,
-    CScore
+    CScore,
+    CLifespan
     // custom action component.
 >;
 

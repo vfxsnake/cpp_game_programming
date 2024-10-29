@@ -10,7 +10,6 @@ Game::Game(const std::string &config)
 
 void Game::init(const std::string &path)
 {
-    // TODO: read in config file here. 
     int width, height, maxFPS;
     bool fullScreenMode;
     std::string fontPath;
@@ -194,7 +193,22 @@ void Game::spawnSmallEnemies(std::shared_ptr<Entity> e)
 
 void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2f &target)
 {
-    // TODO: implement bullet spawn.
+    Vec2f position = entity->get<CTransform>().pos;
+    Vec2f direction = (target - position).normalize();
+    auto bullet = m_entities.addEntity("bullet");
+    bullet->add<CTransform>(
+                        position + direction * entity->get<CShape>().circle.getRadius(), //position
+                        direction * m_bulletConfig.S, // velocity
+                        0.0f  //rotation
+                    );
+    bullet->add<CShape>( 
+                m_bulletConfig.SR,
+                m_bulletConfig.V,
+                sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB),
+                sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB),
+                m_bulletConfig.OT
+            );
+    bullet->add<CLifespan>(m_bulletConfig.L);
 }
 
 void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
@@ -372,7 +386,6 @@ void Game::sUserInput()
             switch (event.key.code)
             {
             case sf::Keyboard::W:
-                // TODO: set players input component "up" to false
                 c_input.up = false;
                 break;
             case sf::Keyboard::S:
@@ -399,7 +412,7 @@ void Game::sUserInput()
             if (event.mouseButton.button == sf::Mouse::Left)
             {
                 std::cout << "left Mouse button clicked at (" << event.mouseButton.x << ", " << event.mouseButton.y << ")" << "\n";
-                spawnBullet(player(), Vec2f());
+                spawnBullet(player(), Vec2f(event.mouseButton.x, event.mouseButton.y));
             }
 
             if (event.mouseButton.button == sf::Mouse::Right)
