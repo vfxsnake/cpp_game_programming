@@ -204,50 +204,66 @@ void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
 
 void Game::sMovement()
 {
-    // TODO: implement all entity movements in this function
-    // ** sample movement speed update
-
+    Vec2 win_size = m_window.getSize();
     for (auto entity : m_entities.getEntities())
     {
         // player movement logic
+        auto& transform = entity->get<CTransform>();
+        auto& circle =  entity->get<CShape>().circle;
         if (entity->tag() == "player")
         {
-            auto& player_transform = player()->get<CTransform>();
+            unsigned int window_right_boundary = win_size.x - circle.getRadius() - circle.getOutlineThickness();
+            unsigned int window_low_boundary = win_size.y - circle.getRadius() - circle.getOutlineThickness();
+            auto& transform = player()->get<CTransform>();
             auto& player_input = player()->get<CInput>();
-            if (player_input.left)
+            if (player_input.left && transform.pos.x > (circle.getRadius() + circle.getOutlineThickness()))
             {
-                player_transform.velocity.x = -1;
+                transform.velocity.x = -1;
             }
-            else if (player_input.right)
+            else if (player_input.right && transform.pos.x < window_right_boundary)
             {
-                player_transform.velocity.x = 1;
+                transform.velocity.x = 1;
             }
             else 
             {
-                player_transform.velocity.x = 0;
+                transform.velocity.x = 0;
             }
 
-            if (player_input.up)
+            if (player_input.up && transform.pos.y > (circle.getRadius() + circle.getOutlineThickness()))
             {
-                player_transform.velocity.y = -1;
+                transform.velocity.y = -1;
             }
-            else if (player_input.down)
+            else if (player_input.down && transform.pos.y < window_low_boundary)
             {
-                player_transform.velocity.y = 1;
+                transform.velocity.y = 1;
             }
             else
             {
-                player_transform.velocity.y = 0;
+                transform.velocity.y = 0;
             }
 
-            if (player_transform.velocity.magnitude() != 0)
-            {
-                player_transform.pos += player_transform.velocity.normalize()  * m_playerConfig.S;
+            if (transform.velocity.magnitude() != 0)
+            {  
+                transform.velocity = transform.velocity.normalize()  * m_playerConfig.S;
             }
         }
 
-        
-        auto& transform = entity->get<CTransform>();
+        else
+        {
+            if (transform.pos.x <= circle.getRadius() + circle.getOutlineThickness()||
+                transform.pos.x >= win_size.x - circle.getRadius() - circle.getOutlineThickness())
+            {
+                transform.velocity.x *= -1;
+            }
+
+            if (transform.pos.y <= circle.getRadius() + circle.getOutlineThickness()||
+                transform.pos.y >= win_size.y - circle.getRadius() - circle.getOutlineThickness())
+            {
+                transform.velocity.y *= -1;
+            }
+
+        }
+
         transform.pos += transform.velocity;
     }
 }
