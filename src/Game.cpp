@@ -120,6 +120,7 @@ void Game::run()
         sEnemySpawner();
         sMovement();
         sCollision();
+        sLifespan();
         sUserInput();
         sGUI();
         sRender();
@@ -284,24 +285,59 @@ void Game::sMovement()
 
 void Game::sLifespan()
 {
-    // TODO: implement lifespan functionality.
-    // for all entities if no valid life spawn skip it,
-    //                  if lifespan > 0 subtract 1
-    //                  cage alpha channel accordingly
-    //                  if lifespan has ended destroy the instance.
+    for (auto entity : m_entities.getEntities())
+    {
+        auto& life_span = entity->get<CLifespan>();
+        if (!life_span.exists)
+        {
+            continue;
+        }
+        
+        float alpha_color = 255 * (life_span.remaining / static_cast<float>(life_span.lifespan));
+        if (alpha_color > 0.0f)
+        {
+            auto& circle = entity->get<CShape>().circle;
+            sf::Color fill_color = circle.getFillColor();
+            sf::Color out_line_color = circle.getOutlineColor();
+
+            fill_color.a = alpha_color;
+            out_line_color.a = alpha_color;
+            circle.setFillColor(fill_color);
+            circle.setOutlineColor(out_line_color);
+        }
+
+        else
+        {
+            entity->destroy();
+        }
+
+        life_span.remaining -= 1;
+    }
 }
 
 void Game::sCollision()
 {
     // implement collisions
-    for (auto b : m_entities.getEntities("bullet"))
+    for (auto bullet : m_entities.getEntities("bullet"))
     {
-        for (auto e : m_entities.getEntities("enemy"))
+        auto bullet_transform = bullet->get<CTransform>();
+        auto bullet_bullet_circle = bullet->get<CShape>().circle;
+
+        for (auto enemy : m_entities.getEntities("enemy"))
         {
+            auto enemy_transform = enemy->get<CTransform>();
+            auto enemy_circle = enemy->get<CShape>().circle;
+
             
+            if (enemy_transform.pos.dist(bullet_transform.pos) < enemy_circle.getRadius())
+            {
+                enemy->destroy();
+                bullet->destroy();
+                spawnSmallEnemies(enemy);
+            } 
         }
 
-        for (auto e : m_entities.getEntities("smallEnemies"))
+        for (auto enemy : m_entities.getEntities("smallEnemy"))
         {
 
         }

@@ -8,7 +8,6 @@ class Component
 {
 public:
     bool exists = false;
-
 };
 
 
