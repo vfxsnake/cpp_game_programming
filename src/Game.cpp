@@ -1,5 +1,7 @@
+#define _USE_MATH_DEFINES
 #include "Game.h"
 
+#include <cmath>
 #include <iostream>
 #include <fstream>
 
@@ -185,10 +187,28 @@ void Game::spawnEnemy()
 
 void Game::spawnSmallEnemies(std::shared_ptr<Entity> e)
 {
-    // TODO: spawn small enemies from the location of the input enemy e
-    //  number of small enemies should be the number of sides of the input enemy
-    //  use the color from the input enemy
-    //  score fo the small enemies should be double of the shape score.
+    if (e->tag() != "enemy")
+    {
+        return;
+    }
+    auto& transform =  e->get<CTransform>();
+    auto circle = e->get<CShape>().circle;
+    auto number_of_points = circle.getPointCount();  
+    float angle = (M_PI * 2) / static_cast<float>(number_of_points);
+    for (int i=0; i < number_of_points; i++)
+    {
+        auto small_enemy = m_entities.addEntity("smallEnemy");
+        Vec2f velocity = Vec2f(std::sin(angle * i), std::cos(angle * i)) * transform.velocity.magnitude() / 2.0f;
+        small_enemy->add<CTransform>(transform.pos, velocity, 0);
+        small_enemy->add<CShape>(
+                            circle.getRadius() / 2.0f,
+                            number_of_points,
+                            circle.getFillColor(),
+                            circle.getOutlineColor(),
+                            circle.getOutlineThickness()
+                        );
+        small_enemy->add<CLifespan>(60);
+    }
 
 }
 
@@ -226,7 +246,7 @@ void Game::sMovement()
         auto& transform = entity->get<CTransform>();
         auto& circle =  entity->get<CShape>().circle;
         if (entity->tag() == "player")
-        {
+        {       
             unsigned int window_right_boundary = win_size.x - circle.getRadius() - circle.getOutlineThickness();
             unsigned int window_low_boundary = win_size.y - circle.getRadius() - circle.getOutlineThickness();
             auto& transform = player()->get<CTransform>();
@@ -317,29 +337,48 @@ void Game::sLifespan()
 
 void Game::sCollision()
 {
-    // implement collisions
+    // bullet-enemy collisions
     for (auto bullet : m_entities.getEntities("bullet"))
     {
         auto bullet_transform = bullet->get<CTransform>();
-        auto bullet_bullet_circle = bullet->get<CShape>().circle;
+        auto bullet_circle = bullet->get<CShape>().circle;
 
-        for (auto enemy : m_entities.getEntities("enemy"))
+        for (auto enemy : m_entities.getEntities())
         {
+            if (enemy->tag() == "player" || enemy->tag() == "bullet")
+            {
+                continue;
+            }
             auto enemy_transform = enemy->get<CTransform>();
             auto enemy_circle = enemy->get<CShape>().circle;
 
             
-            if (enemy_transform.pos.dist(bullet_transform.pos) < enemy_circle.getRadius())
+            if (enemy_transform.pos.dist(bullet_transform.pos) < (enemy_circle.getRadius() + bullet_circle.getRadius()))
             {
                 enemy->destroy();
                 bullet->destroy();
                 spawnSmallEnemies(enemy);
             } 
         }
+    }
 
-        for (auto enemy : m_entities.getEntities("smallEnemy"))
+    for (auto enemy : m_entities.getEntities())
+    {
+        if (enemy->tag() == "player" || enemy->tag() == "bullet")
+            {
+                continue;
+            }
+        auto player_transform = player()->get<CTransform>();
+        auto player_circle = player()->get<CShape>().circle;
+
+        auto enemy_transform = enemy->get<CTransform>();
+        auto enemy_circle = enemy->get<CShape>().circle;
+
+        if (player_transform.pos.dist(enemy_transform.pos) < (player_circle.getRadius() + enemy_circle.getRadius()))
         {
-
+            enemy->destroy();
+            spawnSmallEnemies(enemy);
+            player()->get<CTransform>().pos = Vec2f(static_cast<float>(m_window.getSize().x) / 2.0f,  static_cast<float>(m_window.getSize().y) /2.0f) ;
         }
     }
 }
