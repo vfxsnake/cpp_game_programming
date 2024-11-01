@@ -90,11 +90,13 @@ void Game::init(const std::string &path)
     m_window.create(sf::VideoMode(width, height), "Assignment 2");
     m_window.setFramerateLimit(maxFPS);
 
+    m_spawn_interval = m_enemyConfig.SI;
+
     ImGui::SFML::Init(m_window);
 
     // imgui scale by 2
-    ImGui::GetStyle().ScaleAllSizes(2.0f);
-    ImGui::GetIO().FontGlobalScale = 2.0f;
+    // ImGui::GetStyle().ScaleAllSizes(2.0f);
+    // ImGui::GetIO().FontGlobalScale = 2.0f;
 
     // global random seed.
     srand(time(NULL));
@@ -134,10 +136,7 @@ void Game::run()
 
 void Game::spawnPlayer()
 {
-    // TODO: Finish adding all properties fo the player with the correct values 
-    // getting the player form the entity manager.
     Vec2 win_size = m_window.getSize();
-
     auto entity = m_entities.addEntity("player");
 
     // adding transform component to the player
@@ -239,6 +238,11 @@ void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
 
 void Game::sMovement()
 {
+    if (!s_movement_active)
+    {
+        return;
+    }
+
     Vec2 win_size = m_window.getSize();
     for (auto entity : m_entities.getEntities())
     {
@@ -305,6 +309,11 @@ void Game::sMovement()
 
 void Game::sLifespan()
 {
+    if (!s_lifespan_active)
+    {
+        return;
+    }
+
     for (auto entity : m_entities.getEntities())
     {
         auto& life_span = entity->get<CLifespan>();
@@ -337,6 +346,10 @@ void Game::sLifespan()
 
 void Game::sCollision()
 {
+    if (!s_collision_active)
+    {
+        return;
+    }
     // bullet-enemy collisions
     for (auto bullet : m_entities.getEntities("bullet"))
     {
@@ -378,6 +391,7 @@ void Game::sCollision()
         {
             enemy->destroy();
             spawnSmallEnemies(enemy);
+
             player()->get<CTransform>().pos = Vec2f(static_cast<float>(m_window.getSize().x) / 2.0f,  static_cast<float>(m_window.getSize().y) /2.0f) ;
         }
     }
@@ -385,8 +399,12 @@ void Game::sCollision()
 
 void Game::sEnemySpawner()
 {
-    // TODO: implement enemy spawning 
-    if ((m_currentFrame - m_lastEnemySpawnTime) % m_enemyConfig.SI == 0)
+    if (!s_spawning_active)
+    {
+        return;
+    }
+
+    if ((m_currentFrame - m_lastEnemySpawnTime) % m_spawn_interval == 0)
     {
         spawnEnemy();
     }
@@ -395,8 +413,33 @@ void Game::sEnemySpawner()
 
 void Game::sGUI()
 {
+    ImGui::ShowDemoWindow();
     ImGui::Begin("Geometry Wars");
-    ImGui::Text("stuff goes here");
+     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+    if (ImGui::BeginTabBar("tabs", tab_bar_flags))
+    {
+        if (ImGui::BeginTabItem("System"))
+        {
+            bool test;
+            ImGui::Checkbox("Movement System", &s_movement_active);
+            ImGui::Checkbox("Lifespan System", &s_lifespan_active);
+            ImGui::Checkbox("Collision system", &s_collision_active);
+            ImGui::Checkbox("Spawning system", &s_spawning_active);
+            ImGui::SliderInt("spawning interval", &m_spawn_interval, 5, 100);
+            if (ImGui::Button("Manual Spawn"))
+            {
+                spawnEnemy();
+            }
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Entity Manager"))
+        {
+            
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
     ImGui::End();
 }
 

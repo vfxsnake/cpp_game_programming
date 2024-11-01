@@ -35,9 +35,6 @@ public:
     
     void update()
     {
-        // TODO: add entities from m_entitiesToAdd in the proper locations
-        //       - add them to the vector of all entities
-
         m_entities.insert(
             m_entities.end(), // where in the vector 
             std::make_move_iterator(m_entitiesToAdd.begin()), // iterator start 

@@ -25,8 +25,15 @@ private:
     int m_score = 0;
     int m_currentFrame = 0;
     int m_lastEnemySpawnTime = 0;
+    int m_spawn_interval = 60;
     bool m_paused = false;
     bool m_running = true;
+
+    bool s_movement_active = true;
+    bool s_lifespan_active = true;
+    bool s_collision_active = true;
+    bool s_spawning_active = true;
+
 
     void init(const std::string &config);
     void setPaused(bool paused);
