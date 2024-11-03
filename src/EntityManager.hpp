@@ -47,7 +47,7 @@ public:
         removeDeadEntities(m_entities);
 
         // // remove dead entities from each vector int the entity map
-        // // C==20 way of iterating through [key, value] pairs in a map
+        // // C++20 way of iterating through [key, value] pairs in a map
         for  (auto& [tag, entityVec] : m_entityMap)
         {
             removeDeadEntities(entityVec);

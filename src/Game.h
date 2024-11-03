@@ -18,6 +18,7 @@ private:
     EntityManager m_entities;  //factory of entities 
     sf::Font m_font;  // the font we will use to draw.
     sf::Text m_text;  // the score text to be drawn to the screen.
+    sf::Text m_special_weapon;
     PlayerConfig m_playerConfig;
     EnemyConfig m_enemyConfig;
     BulletConfig m_bulletConfig;
@@ -28,12 +29,12 @@ private:
     int m_spawn_interval = 60;
     bool m_paused = false;
     bool m_running = true;
+    bool display_special_weapon = false;
 
     bool s_movement_active = true;
     bool s_lifespan_active = true;
     bool s_collision_active = true;
     bool s_spawning_active = true;
-
 
     void init(const std::string &config);
     void setPaused(bool paused);
@@ -45,6 +46,7 @@ private:
     void sGUI();
     void sEnemySpawner();
     void sCollision();
+    void sSpecialMove();
 
     void spawnPlayer();
     void spawnEnemy();

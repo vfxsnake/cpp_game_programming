@@ -5,10 +5,12 @@
 #include <iostream>
 #include <fstream>
 
+
 Game::Game(const std::string &config)
 {
     init(config);
 }
+
 
 void Game::init(const std::string &path)
 {
@@ -92,6 +94,12 @@ void Game::init(const std::string &path)
 
     m_spawn_interval = m_enemyConfig.SI;
 
+    if (!m_font.loadFromFile(fontPath))
+    {
+        std::cout << "unable to load font file" << fontPath << "\n";
+        return;
+    }
+
     ImGui::SFML::Init(m_window);
 
     // imgui scale by 2
@@ -103,12 +111,14 @@ void Game::init(const std::string &path)
     spawnPlayer();
 }
 
+
 std::shared_ptr<Entity> Game::player()
 {
     auto& players = m_entities.getEntities("player");
     assert(players.size() == 1);
     return players.front();
 }
+
 
 void Game::run()
 {
@@ -125,6 +135,7 @@ void Game::run()
         sMovement();
         sCollision();
         sLifespan();
+        sSpecialMove();
         sUserInput();
         sGUI();
         sRender();
@@ -149,15 +160,13 @@ void Game::spawnPlayer()
             sf::Color(m_playerConfig.OR, m_playerConfig.OG, m_playerConfig.OB),
             m_playerConfig.OT
         );
-
     entity->add<CInput>();
+    entity->add<CSpecialMove>();
 }
 
 
 void Game::spawnEnemy()
 {
-    // TODO: enemies should be spawned with in the boundaries of the screen and withe the config settings.
-
     Vec2 win_size = m_window.getSize();
     float max_spawn_threshold_position_x = win_size.x - m_enemyConfig.SR;
     float max_spawn_threshold_position_y = win_size.y - m_enemyConfig.SR;
@@ -180,9 +189,11 @@ void Game::spawnEnemy()
                 sf::Color(m_enemyConfig.OR, m_enemyConfig.OG, m_enemyConfig.OB),
                 m_enemyConfig.OT
             );
+    enemy->add<CScore>(number_of_points * 100);
     // record the last frame an enemy was spawned.
     m_lastEnemySpawnTime = m_currentFrame;
 }
+
 
 void Game::spawnSmallEnemies(std::shared_ptr<Entity> e)
 {
@@ -207,9 +218,11 @@ void Game::spawnSmallEnemies(std::shared_ptr<Entity> e)
                             circle.getOutlineThickness()
                         );
         small_enemy->add<CLifespan>(60);
+        small_enemy->add<CScore>(e->get<CScore>().score * 2);
     }
 
 }
+
 
 void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2f &target)
 {
@@ -231,10 +244,32 @@ void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2f &target)
     bullet->add<CLifespan>(m_bulletConfig.L);
 }
 
+
 void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
 {
-    // TODO: implement you own component here
+    auto& special_move = player()->get<CSpecialMove>();
+    if (! special_move.charged)
+        return;
+
+    Vec2f position = entity->get<CTransform>().pos;
+    auto weapon = m_entities.addEntity("special");
+    weapon->add<CTransform>(
+                        position, //position
+                        Vec2f(0,0), // velocity
+                        0.0f  //rotation
+                    );
+    weapon->add<CShape>( 
+                m_bulletConfig.SR,
+                m_bulletConfig.V,
+                sf::Color(0, 0, 0, 255),
+                sf::Color(255, 255, 255, 255),
+                5
+            );
+    weapon->add<CLifespan>(m_bulletConfig.L/3.0f);
+    special_move.energy = 0;
+    special_move.charged = false;
 }
+
 
 void Game::sMovement()
 {
@@ -307,6 +342,7 @@ void Game::sMovement()
     }
 }
 
+
 void Game::sLifespan()
 {
     if (!s_lifespan_active)
@@ -344,6 +380,7 @@ void Game::sLifespan()
     }
 }
 
+
 void Game::sCollision()
 {
     if (!s_collision_active)
@@ -369,15 +406,36 @@ void Game::sCollision()
             if (enemy_transform.pos.dist(bullet_transform.pos) < (enemy_circle.getRadius() + bullet_circle.getRadius()))
             {
                 enemy->destroy();
+                m_score += enemy->get<CScore>().score;
+       
                 bullet->destroy();
                 spawnSmallEnemies(enemy);
             } 
         }
     }
 
+    for (auto bullet : m_entities.getEntities("special"))
+    {
+        auto bullet_transform = bullet->get<CTransform>();
+        auto bullet_circle = bullet->get<CShape>().circle;
+
+        for (auto enemy : m_entities.getEntities("enemy"))
+        {
+            auto enemy_transform = enemy->get<CTransform>();
+            auto enemy_circle = enemy->get<CShape>().circle;
+
+            
+            if (enemy_transform.pos.dist(bullet_transform.pos) < (enemy_circle.getRadius() + bullet_circle.getRadius()))
+            {
+                enemy->destroy();
+                m_score += enemy->get<CScore>().score;
+            } 
+        }
+    }
+
     for (auto enemy : m_entities.getEntities())
     {
-        if (enemy->tag() == "player" || enemy->tag() == "bullet")
+        if (enemy->tag() == "player" || enemy->tag() == "bullet" || enemy->tag() == "special")
             {
                 continue;
             }
@@ -390,12 +448,15 @@ void Game::sCollision()
         if (player_transform.pos.dist(enemy_transform.pos) < (player_circle.getRadius() + enemy_circle.getRadius()))
         {
             enemy->destroy();
+            m_score += enemy->get<CScore>().score;
             spawnSmallEnemies(enemy);
 
             player()->get<CTransform>().pos = Vec2f(static_cast<float>(m_window.getSize().x) / 2.0f,  static_cast<float>(m_window.getSize().y) /2.0f) ;
         }
     }
+
 }
+
 
 void Game::sEnemySpawner()
 {
@@ -411,9 +472,10 @@ void Game::sEnemySpawner()
 
 }
 
+
 void Game::sGUI()
 {
-    ImGui::ShowDemoWindow();
+    // ImGui::ShowDemoWindow();
     ImGui::Begin("Geometry Wars");
      ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
     if (ImGui::BeginTabBar("tabs", tab_bar_flags))
@@ -435,6 +497,62 @@ void Game::sGUI()
 
         if (ImGui::BeginTabItem("Entity Manager"))
         {
+            if (ImGui::CollapsingHeader("Entities"))
+            {
+                for (auto& [tag, entityVec] : m_entities.getEntityMap())
+                {
+                    ImGui::Indent();
+                    if(ImGui::CollapsingHeader(tag.c_str()))
+                    {
+                        for (auto entity : entityVec)
+                        {
+                            ImGui::Indent();
+                            std::string button_label = "D##" + std::to_string(entity->id());
+                            sf::Color color = entity->get<CShape>().circle.getOutlineColor();
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(color.r, color.g, color.b, color.a));
+                            if(ImGui::Button(button_label.c_str()))
+                            {
+                                entity->destroy();
+                            }
+                            ImGui::PopStyleColor();
+                            ImGui::SameLine();
+                            ImGui::Text(entity->tag().c_str());
+                            std::string  position = "(" + std::to_string(entity->get<CTransform>().pos.x) + ", " 
+                                                        + std::to_string(entity->get<CTransform>().pos.y) + ")";
+                            ImGui::SameLine();
+                            ImGui::Text(position.c_str());
+                            ImGui::Unindent();
+                        }
+
+                    }
+                    ImGui::Unindent();
+                }
+            }
+
+            if (ImGui::CollapsingHeader("All Entities", ImGuiTreeNodeFlags_None))
+            {
+                ImGui::Indent();
+                for (auto entity : m_entities.getEntities())
+                {
+                    ImGui::Indent();
+                    std::string button_label = "D##" + std::to_string(entity->id());
+                    sf::Color color = entity->get<CShape>().circle.getOutlineColor();
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(color.r, color.g, color.b, color.a));
+                    if(ImGui::Button(button_label.c_str()))
+                    {
+                        entity->destroy();
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::Text(entity->tag().c_str());
+                    std::string  position = "(" + std::to_string(entity->get<CTransform>().pos.x) + ", " 
+                                                + std::to_string(entity->get<CTransform>().pos.y) + ")";
+                    ImGui::SameLine();
+                    ImGui::Text(position.c_str());
+                    ImGui::Unindent();
+                }
+                ImGui::Unindent();
+            }
             
             ImGui::EndTabItem();
         }
@@ -443,10 +561,9 @@ void Game::sGUI()
     ImGui::End();
 }
 
+
 void Game::sRender()
 {
-    // TODO: change the code bellow to draw all entities
-
     m_window.clear();
     for (auto entity : m_entities.getEntities())
     {
@@ -456,10 +573,22 @@ void Game::sRender()
         m_window.draw(entity->get<CShape>().circle);
     }
 
+    m_text.setFont(m_font);
+    m_special_weapon.setFont(m_font);
+    std::string score = "score: " + std::to_string(m_score);
+    m_text.setString(score);
+    m_window.draw(m_text);
+    if (display_special_weapon)
+    {
+        m_special_weapon.setString("omni blast ready");
+        m_special_weapon.setPosition(0.0, 25);
+        m_window.draw(m_special_weapon);
+    }
     ImGui::SFML::Render(m_window);
 
     m_window.display();
 }
+
 
 void Game::sUserInput()
 {
@@ -544,4 +673,28 @@ void Game::sUserInput()
 
     }
     
+}
+
+
+void Game::sSpecialMove()
+{
+    for (auto& entity : m_entities.getEntities("special"))
+    {
+        auto& circle = entity->get<CShape>().circle;
+        auto radius = circle.getRadius();
+        circle.setRadius(radius + 10);
+        circle.setOrigin(radius, radius); 
+    }
+
+    auto& special_move = player()->get<CSpecialMove>();
+    special_move.energy += 1;
+    if (special_move.energy > 120)
+    {
+        special_move.charged = true;
+        display_special_weapon = true;
+    }
+    else
+    {
+        display_special_weapon = false;
+    }
 }

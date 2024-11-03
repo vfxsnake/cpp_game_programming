@@ -13,8 +13,8 @@ using ComponentTuple = std::tuple<
     CCollision,
     CInput,
     CScore,
-    CLifespan
-    // custom action component.
+    CLifespan,
+    CSpecialMove
 >;
 
 class Entity

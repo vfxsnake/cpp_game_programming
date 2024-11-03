@@ -85,4 +85,10 @@ public:
 
 };
 
-// TODO: create the custom action component.
+class CSpecialMove : public Component
+{
+public:
+    bool charged = false;
+    int energy = 0;
+    CSpecialMove() = default;
+};
