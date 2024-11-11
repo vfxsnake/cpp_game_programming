@@ -58,6 +58,10 @@
         "list": "cpp",
         "unordered_map": "cpp",
         "functional": "cpp",
-        "xhash": "cpp"
+        "xhash": "cpp",
+        "cassert": "cpp",
+        "deque": "cpp",
+        "set": "cpp",
+        "sstream": "cpp"
     }
 }
