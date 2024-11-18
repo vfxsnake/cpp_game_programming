@@ -26,13 +26,14 @@ private:
         else
         {
             m_textureMap[textureName].setSmooth(smooth);
-            std::cout << "Loaded Texture" << path << "\n";
+            std::cout << "Loaded Texture " << path << "\n";
         }
     }
 
-    void addAnimation(const std::string& animationName, const std::string& textureName, size_t frames, size_t speed)
+    void addAnimation(const std::string& animationName, const sf::Texture& t, size_t frames, size_t speed)
     {
-        m_animationMap[animationName] = Animation(animationName, textureName, frames, speed);
+        m_animationMap[animationName] = Animation(animationName, t, frames, speed);
+        std::cout << "Loaded Animation " << animationName << "\n";
     }
 
     void addFont(const std::string& fontName, const std::string& path)
@@ -56,8 +57,12 @@ public:
     void loadFromFile(const std::string& path)
     {
         std::ifstream file(path);
+        if (!file)
+        {
+            std::cerr << "unable to load file \n" ;
+        }
         std::string str;
-        while (file.good())
+        while (file >> str)
         {
             if (str == "Texture")
             {
@@ -71,10 +76,11 @@ public:
                 std::string name, texture;
                 size_t frames, speed;
                 file >> name >> texture >> frames >> speed;
-                addAnimation(name, texture, frames, speed);
+                const sf::Texture& tex = getTexture(texture);
+                addAnimation(name, tex, frames, speed);
             }
 
-            else if (str == "font")
+            else if (str == "Font")
             {
                 std:: string name, path;
                 file >> name >> path;
@@ -89,12 +95,14 @@ public:
 
     const sf::Texture& getTexture(const std::string& textureName) const
     {
+        std::cout << "getTexture: " << textureName <<" \n";
         assert(m_textureMap.find(textureName) != m_textureMap.end());
         return m_textureMap.at(textureName);
     }
 
-    const Animation& getAnimation(std::string& animationName)
+    const Animation& getAnimation(const std::string& animationName) const
     {
+        std::cout << "getAnimation: " << animationName <<" \n";
         assert(m_animationMap.find(animationName) != m_animationMap.end());
         return m_animationMap.at(animationName);
     }

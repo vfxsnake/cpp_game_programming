@@ -1,11 +1,8 @@
 #include "Scene.h"
 #include "GameEngine.h"
-#include "Vec2.hpp"
 
 
-Scene::Scene() { }
-
-Scene::Scene(std::shared_ptr<GameEngine> gameEngine) 
+Scene::Scene(GameEngine* gameEngine) 
         : m_game(gameEngine) { }
 
 void Scene::doAction(const Action &action)
@@ -15,7 +12,7 @@ void Scene::doAction(const Action &action)
 
 void Scene::setPaused(bool paused)
 {
-    m_pause = paused;
+    m_paused = paused;
 }
 
 void Scene::simulate(const size_t frame) {}
@@ -30,7 +27,7 @@ size_t Scene::width() const
     return m_game->window().getSize().x;
 }
 
-size_t Scene::currentFrame() const
+size_t Scene::height() const
 {
     return m_game->window().getSize().y;
 }

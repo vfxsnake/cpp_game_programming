@@ -6,7 +6,7 @@
 #include "Components.hpp"
 #include "Action.hpp"
 
-Scene_Menu::Scene_Menu(std::shared_ptr<GameEngine> gameEngine) 
+Scene_Menu::Scene_Menu(GameEngine* gameEngine) 
         : Scene(gameEngine) // this is why it uses explicit
 {
     init();
@@ -18,6 +18,8 @@ void Scene_Menu::init()
     registerAction(sf::Keyboard::S, "DOWN");
     registerAction(sf::Keyboard::D, "PLAY");
     registerAction(sf::Keyboard::Escape, "QUIT");
+    registerAction(sf::Keyboard::Up, "UP");
+    registerAction(sf::Keyboard::Down, "DOWN");
 
     m_title = "Mega Mario";
     int titleSize = 30;
@@ -35,9 +37,9 @@ void Scene_Menu::init()
     m_menuStrings.push_back("level  2");
     m_menuStrings.push_back("level  3");
 
-    m_levelPaths.push_back("level1.txt");
-    m_levelPaths.push_back("level2.txt");
-    m_levelPaths.push_back("level3.txt");
+    m_levelPaths.push_back("levels/level1.txt");
+    m_levelPaths.push_back("levels/level2.txt");
+    m_levelPaths.push_back("levels/level3.txt");
 
     for (int i = 0; i < m_menuStrings.size(); i++)
     {
@@ -63,7 +65,7 @@ void Scene_Menu::init()
 void Scene_Menu::update()
 {
     m_entityManager.update();
-    // sRender(); // ?? should this be here??
+    sRender();
 }
 
 void Scene_Menu::onEnd()
@@ -73,27 +75,22 @@ void Scene_Menu::onEnd()
 
 void Scene_Menu::sDoAction(const Action& action)
 {
+    
     if (action.type() == "START")
     {
         if (action.name() == "UP")
         {
-            if (m_selectedMenuIndex > 0)
-            {
-                m_selectedMenuIndex--;
-            }
-            else
-            {
-                m_selectedMenuIndex = m_menuStrings.size() -1;
-            }
+            m_selectedMenuIndex = (m_selectedMenuIndex - 1) % m_menuStrings.size();
         }
 
-        if (action.type() == "DOWN")
+        else if (action.name() == "DOWN")
         {
             m_selectedMenuIndex = (m_selectedMenuIndex + 1) % m_menuStrings.size();
         }
 
         else if (action.name() == "PLAY")
         {
+
             m_game->changeScene("PLAY", std::make_shared<Scene_Play>(m_game, m_levelPaths[m_selectedMenuIndex]));
     
         }
@@ -102,6 +99,8 @@ void Scene_Menu::sDoAction(const Action& action)
         {
             onEnd();
         }
+        
+        std::cout << "index number " << m_selectedMenuIndex << "\n";
     }
 }
 
@@ -120,7 +119,7 @@ void Scene_Menu::sRender()
     {
         m_menuText.setString(m_menuStrings[i]);
         m_menuText.setFillColor(i == m_selectedMenuIndex ? sf::Color::Black : sf::Color::White);
-        m_menuText.setPosition(sf::Vector2f(10, 110 + i * 72));
+        m_menuText.setPosition(sf::Vector2f((float)10, float(110 + i * 72)));
         m_game->window().draw(m_menuText);
     }
 

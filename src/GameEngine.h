@@ -3,15 +3,16 @@
 #include <memory>
 
 #include <SFML/Graphics.hpp> 
-#include "Scene.h"
+#include "Assets.hpp"
 
 // forward declarations
-class Assets;
+class Scene;
+
 
 using SceneMap = std::map<std::string, std::shared_ptr<Scene>>;
 
 
-class GameEngine
+class GameEngine : public std::enable_shared_from_this<GameEngine>
 {
 private:
     sf::RenderWindow m_window;

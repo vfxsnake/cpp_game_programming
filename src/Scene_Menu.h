@@ -14,6 +14,7 @@ class Scene_Menu : public Scene
 protected:
     std::string m_title;
     std::vector<std::string> m_menuStrings;
+    
     sf::Text m_menuText;
     std::vector<sf::Text> m_menuItems;
 
@@ -27,6 +28,6 @@ protected:
     void sDoAction(const Action &action) override;
 
 public:
-    explicit Scene_Menu(std::shared_ptr<GameEngine> gameEngine);
+    Scene_Menu(GameEngine* gameEngine);
     void sRender() override;
 };

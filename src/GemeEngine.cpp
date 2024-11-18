@@ -2,8 +2,8 @@
 #include <utility>
 
 #include "GameEngine.h"
-#include "Assets.hpp"
 #include "Action.hpp"
+#include "Scene.h"
 #include "Scene_Play.h"
 #include "Scene_Menu.h"
 #include <imgui.h>
@@ -25,7 +25,6 @@ void GameEngine::init(const std::string& path)
 
     // ImGui::GetStyle().ScaleAllSizes(2.0f);
     // ImGui::GetIO().FontGlobalScale = 2.0f;
-
     changeScene("Menu", std::make_shared<Scene_Menu>(this));
 }
 
@@ -84,10 +83,10 @@ void GameEngine::sUserInput()
         {
             if (currentScene()->getActionMap().find(event.key.code) == currentScene()->getActionMap().end()) 
             {
+                std::cout << event.key.code << "action not in the action map \n";
                 continue;
-            }
-
-            const std::string actionType = (event.type == sf::Event::EventType::TouchEnded) ? "END" : "START";
+            } 
+            const std::string actionType = (event.type == sf::Event::EventType::KeyPressed ? "START" : "END");
             currentScene()->doAction(Action(currentScene()->getActionMap().at(event.key.code), actionType));
         }
     }

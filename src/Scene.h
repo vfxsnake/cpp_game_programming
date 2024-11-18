@@ -2,17 +2,11 @@
 
 #include <memory>
 #include <map>
+#include "EntityManager.hpp"
+#include "Action.hpp"
+#include "Vec2.hpp"
 
-
-// forward declaration
 class GameEngine;
-class Action;
-class EntityManager;
-
-template <typename T>
-class Vec2;  // vector class forward declaration and type defined with using.
-using Vec2f = Vec2<float>;
-
 
 using ActionMap = std::map<int, std::string>;
 
@@ -20,10 +14,10 @@ using ActionMap = std::map<int, std::string>;
 class Scene
 {
 protected:
-    std::shared_ptr<GameEngine> m_game;
+    GameEngine* m_game;
     EntityManager m_entityManager;
     ActionMap m_actionMap;
-    bool m_pause = false;
+    bool m_paused = false;
     bool m_hasEnded = false;
     size_t m_currentFrame = 0;
 
@@ -32,9 +26,7 @@ protected:
 
 public:
     
-    Scene() =  default;
-    
-    explicit Scene(std::shared_ptr<GameEngine> gameEngine);
+    explicit Scene(GameEngine* gameEngine);
 
     virtual void update() = 0;
     virtual void sDoAction(const Action& action) = 0;
