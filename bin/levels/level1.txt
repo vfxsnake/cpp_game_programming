@@ -46,7 +46,7 @@ Tile Block 25 2
 Tile Block 28 1
 Tile Block 28 2
 Dec CloudBig 28 9
-Tile Bock 29 1
+Tile Block 29 1
 Tile Ground 28 0
 Tile Ground 29 0
 Tile Ground 30 0
@@ -163,4 +163,4 @@ Tile Pole 83 6
 Tile PoleTop 83 7
 Dec Flag 82.5 6
 Dec CloudSmall 2 7
-Player 26 48 48 5 -20 20 0.75 Buster
+Player 2 6 48 48 5 -20 20 0.75 Buster

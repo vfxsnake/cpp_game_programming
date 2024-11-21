@@ -6,6 +6,7 @@
 #include "Scene.h"
 #include "EntityManager.hpp"
 
+
 class Scene_Play : public Scene
 {
     struct PlayerConfig
@@ -21,7 +22,7 @@ protected:
     PlayerConfig m_playerConfig;
     bool m_drawTextures = true;
     bool m_drawCollision = false;
-    bool m_drawGrid = true;
+    bool m_drawGrid = false;
     const Vec2f m_gridSize = {64, 64};
     sf::Text m_gridText;
 
@@ -42,6 +43,8 @@ protected:
     void sCollision();
 
     void sAnimation();
+
+    void sGUI();
     
     void sRender() override;
     

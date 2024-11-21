@@ -4,6 +4,10 @@
 #include "GameEngine.h"
 #include "Components.hpp"
 #include "Action.hpp"
+#include "Scene_Menu.h"
+#include <imgui-SFML.h>
+#include <imgui.h>
+#include <fstream>
 
 Scene_Play::Scene_Play(GameEngine* gameEngine, const std::string levelPath) 
         : Scene(gameEngine), m_levelPath(levelPath)
@@ -28,70 +32,83 @@ void Scene_Play::init(const std::string& levelPath)
 
 Vec2f Scene_Play::gridToMidPixel(float gridX, float gridY, std::shared_ptr<Entity> entity)
 {
-    // TODO: This function takes in a grid (x,y) position and an Entity
-    //       Return a vec2 indicating where the CENTER position of the Entity should be
-    //       You must use the Entity's Animation size to position it correctly
-    //       The size of the grid width and height is stored in m_gridSize.x and m_gridSize.y
-    //       The bottom-left corner of the Animation should aligh with the bottom left of the grid cellced  
-
-    return Vec2f(0.0, 0.0);
+    float tile_size = 64;
+    float window_y_size = m_game->window().getSize().y;
+    Vec2f animation_size = entity->get<CAnimation>().animation.getSize();
+    return Vec2f((gridX * tile_size) + (animation_size.x / 2.0f), 
+                 window_y_size - (gridY * tile_size) - (animation_size.y / 2));
 }
 
 void Scene_Play::loadLevel(const std::string& filename)
 {
+    // reseting entity Manager
     m_entityManager = EntityManager();
 
+    // loading from file
+    std::ifstream file(filename);
+        if (!file)
+        {
+            std::cerr << "unable to load Level path \n" ;
+        }
+        std::string str;
+        while (file >> str)
+        {
+            std::cout << "file current string: " << str << "\n";
+            if (str == "Tile")
+            {
+                std::string name;
+                float grid_x, grid_y;
+                file >> name >> grid_x >> grid_y;
+                auto entity = m_entityManager.addEntity("Tile");
+
+                entity->add<CAnimation>(m_game->assets().getAnimation(name), true);
+                entity->add<CTransform>(gridToMidPixel(grid_x, grid_y, entity));
+            }
+
+            else if (str == "Dec")
+            {
+                std::string name;
+                float grid_x, grid_y;
+                file >> name >> grid_x >> grid_y;
+                auto entity = m_entityManager.addEntity("Dec");
+                entity->add<CAnimation>(m_game->assets().getAnimation(name), true);
+                entity->add<CTransform>(gridToMidPixel(grid_x, grid_y, entity));
+            }
+
+            else if (str == "Player")
+            {
+                
+                file >> m_playerConfig.X 
+                     >> m_playerConfig.Y
+                     >> m_playerConfig.CX
+                     >> m_playerConfig.CY
+                     >> m_playerConfig.SPEED
+                     >> m_playerConfig.JUMP
+                     >> m_playerConfig.MAX_SPEED
+                     >> m_playerConfig.GRAVITY
+                     >> m_playerConfig.WEAPON
+                     ;
+            }
+            else
+            {
+                std::cerr << "Unknown Element type: " << str << "\n";
+            }
+        }
+    
     spawnPlayer();
-
-    auto brick = m_entityManager.addEntity("tile");
-    brick->add<CAnimation>(m_game->assets().getAnimation("Brick"), true);
-    brick->add<CTransform>(Vec2f(96, 480));
-
-    if (brick->get<CAnimation>().animation.getName() == "Brick")
-    {
-        std::cout << "This could be a good way of identifying if a tile is a brick!\n";
-    }
-
-    auto block = m_entityManager.addEntity("tile");
-    block->add<CAnimation>(m_game->assets().getAnimation("Ground"), true);
-    block->add<CTransform>(Vec2f(128, 480));
-    block->add<CBoundingBox>(m_game->assets().getAnimation("Ground").getSize());
-
-
-
-
-    auto question = m_entityManager.addEntity("tile");
-    question->add<CAnimation>(m_game->assets().getAnimation("Ground"), true);
-    question->add<CTransform>(Vec2f(450, 480));
-
-
-    // NOTE: THIS IS INCREDIBLY IMPORTANT PLEASE READ THIS EXAMPLE
-    //       Components are returned as references
-    //       If you do not specify a reference variable type, it will COPY the component
-    //       Here is an example:
-    //
-    //       This will COPY the transform into the variable 'transform1' - it is INCORRECT
-    //       Any changes you make to transform1 will not be changed inside the entity
-    //       auto transform1 = entity->get<CTransform>()
-    //
-    //       This will REFERENCE the transform with the variable 'transform2' - it is CORRECT
-    //       Now any changes you make to transform2 will be changed inside the entity
-    //       auto& transform2 = entity->get<CTransform>()
 }
 
 
 void Scene_Play::spawnPlayer()
 {
-    auto player = m_entityManager.addEntity("player");
-    player->add<CAnimation>(m_game->assets().getAnimation("Stand"), true);
-    player->add<CTransform>(Vec2f(224, 352));
-    player->add<CBoundingBox>(Vec2f(48, 48));
-    player->add<CState>("stand");
-    player->add<CInput>();
+    m_player = m_entityManager.addEntity("Player");
+    m_player->add<CAnimation>(m_game->assets().getAnimation("Stand"), true);
+    m_player->add<CTransform>(gridToMidPixel(m_playerConfig.X, m_playerConfig.Y, m_player));
+    m_player->add<CBoundingBox>(Vec2f(m_playerConfig.CX, m_playerConfig.CY));
+    m_player->add<CState>("stand");
+    m_player->add<CInput>();
     // TODO: add remaining compoments to player
     // be sure to destroy the player if you are respawning 
-
-    std::cout << "end spawning player \n";
 }
 
 void Scene_Play::spawnBullet(std::shared_ptr<Entity> entity)
@@ -109,6 +126,7 @@ void Scene_Play::update()
     SLifespan();
     sCollision();
     sAnimation();
+    sGUI();
     sRender();
 }
 
@@ -186,7 +204,7 @@ void Scene_Play::onEnd()
 {
     // TODO: when the scene ends, change back to the MENU scene
     // use m_game->changeScene(correct params);
-    // m_game->changeScene( "MENU", std::make_shared<Scene_Menu>(m_game));
+    m_game->changeScene( "MENU", std::make_shared<Scene_Menu>(m_game),true);
 }
 
 void Scene_Play::sRender()
@@ -201,13 +219,12 @@ void Scene_Play::sRender()
         m_game->window().clear(sf::Color(50, 50, 150));
     }
 
-    // temporary draw of player
     auto &pPos = m_player->get<CTransform>().pos;
     float windowCenterX = std::max(m_game->window().getSize().x / 2.0f, pPos.x);
-    // sf::View view = m_game->window().getView();
-    // view.setCenter(windowCenterX, m_game->window().getSize().y - view.getCenter().y);
-    // m_game->window().setView(view);
-
+    sf::View view = m_game->window().getView();
+    view.setCenter(windowCenterX, m_game->window().getSize().y - view.getCenter().y);
+    m_game->window().setView(view);
+    
     // draw sprite textures
     if (m_drawTextures)
     {
@@ -274,4 +291,55 @@ void Scene_Play::sRender()
             }
         }
     }
+}
+
+void Scene_Play::sGUI()
+{
+
+    ImGui::Begin("Geometry Wars");
+     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+    if (ImGui::BeginTabBar("tabs", tab_bar_flags))
+    {
+       if (ImGui::BeginTabItem("Systems"))
+        {
+            ImGui::EndTabItem();
+        } 
+
+    if (ImGui::BeginTabItem("Entity Manager"))
+        {
+            if (ImGui::CollapsingHeader("Entities"))
+            {
+                for (auto& [tag, entityVec] : m_entityManager.getEntityMap())
+                {
+                    ImGui::Indent();
+                    if(ImGui::CollapsingHeader(tag.c_str()))
+                    {
+                        for (auto entity : entityVec)
+                        {
+                            ImGui::Indent();
+                            std::string button_label = "D##" + std::to_string(entity->id());
+                            if(ImGui::Button(button_label.c_str()))
+                            {
+                                entity->destroy();
+                            }
+                            ImGui::SameLine();
+                            ImGui::Text(entity->tag().c_str());
+                            std::string  position = "(" + std::to_string(entity->get<CTransform>().pos.x) + ", " 
+                                                        + std::to_string(entity->get<CTransform>().pos.y) + ")";
+                            ImGui::SameLine();
+                            ImGui::Text(position.c_str());
+                            ImGui::Unindent();
+                        }
+
+                    }
+                    ImGui::Unindent();
+                }
+            }
+
+            ImGui::EndTabItem();
+        } 
+
+        ImGui::EndTabBar();
+    }
+    ImGui::End();
 }

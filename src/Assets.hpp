@@ -104,6 +104,7 @@ public:
     {
         std::cout << "getAnimation: " << animationName <<" \n";
         assert(m_animationMap.find(animationName) != m_animationMap.end());
+        std::cout << "animation found " << animationName << "\n";
         return m_animationMap.at(animationName);
     }
 

@@ -32,7 +32,6 @@ void Scene_Menu::init()
             float(titleSize * 3)
             );
 
-
     m_menuStrings.push_back("level  1");
     m_menuStrings.push_back("level  2");
     m_menuStrings.push_back("level  3");
@@ -59,7 +58,6 @@ void Scene_Menu::init()
         );
         m_menuItems.push_back(text);
     }
-
 }
 
 void Scene_Menu::update()
@@ -75,7 +73,6 @@ void Scene_Menu::onEnd()
 
 void Scene_Menu::sDoAction(const Action& action)
 {
-    
     if (action.type() == "START")
     {
         if (action.name() == "UP")
