@@ -37,6 +37,8 @@ protected:
     void spawnBullet(std::shared_ptr<Entity> entity);
 
     void sMovement();
+
+    void sGravity();
     
     void SLifespan();
     

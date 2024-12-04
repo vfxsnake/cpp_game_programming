@@ -81,7 +81,7 @@ public:
 
     CBoundingBox() = default;
     CBoundingBox(const Vec2f& s) 
-        : size(s), halfSize(s.x / 2.0f, s.y / 2.0f) {}
+        : size(s), halfSize(s.x * 0.5f, s.y * 0.5f) {}
 };
 
 
