@@ -26,7 +26,6 @@ private:
         else
         {
             m_textureMap[textureName].setSmooth(smooth);
-            std::cout << "Loaded Texture " << path << "\n";
         }
     }
 
@@ -95,16 +94,13 @@ public:
 
     const sf::Texture& getTexture(const std::string& textureName) const
     {
-        std::cout << "getTexture: " << textureName <<" \n";
         assert(m_textureMap.find(textureName) != m_textureMap.end());
         return m_textureMap.at(textureName);
     }
 
     const Animation& getAnimation(const std::string& animationName) const
     {
-        std::cout << "getAnimation: " << animationName <<" \n";
         assert(m_animationMap.find(animationName) != m_animationMap.end());
-        std::cout << "animation found " << animationName << "\n";
         return m_animationMap.at(animationName);
     }
 

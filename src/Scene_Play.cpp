@@ -23,9 +23,10 @@ void Scene_Play::init(const std::string& levelPath)
     registerAction(sf::Keyboard::C, "TOGGLE_COLLISION");
     registerAction(sf::Keyboard::G, "TOGGLE_GRID");
     registerAction(sf::Keyboard::Space, "JUMP");
-    registerAction(sf::Keyboard::Down, "MOVE_DOWN");
     registerAction(sf::Keyboard::Left, "MOVE_LEFT");
     registerAction(sf::Keyboard::Right, "MOVE_RIGHT");
+    registerAction(sf::Keyboard::C, "SHOOT");
+
 
     // TODO register all other game play actions.
 
@@ -108,7 +109,7 @@ void Scene_Play::spawnPlayer()
 {
     m_player = m_entityManager.addEntity("Player");
     m_player->add<CAnimation>(m_game->assets().getAnimation("Stand"), true);
-    auto& transform_c = m_player->add<CTransform>(gridToMidPixel(m_playerConfig.X, m_playerConfig.Y, m_player));
+    m_player->add<CTransform>(gridToMidPixel(m_playerConfig.X, m_playerConfig.Y, m_player));
 
     m_player->add<CBoundingBox>(Vec2f(m_playerConfig.CX, m_playerConfig.CY));
     m_player->add<CState>("stand");
@@ -118,66 +119,86 @@ void Scene_Play::spawnPlayer()
 
 void Scene_Play::spawnBullet(std::shared_ptr<Entity> entity)
 {
-     // TODO: this should spawn a bullet at the given entity, going in the direction the entity is facing
+    auto& entity_transform = entity->get<CTransform>();
+    float direction = entity_transform.scale.x;
+    auto bullet = m_entityManager.addEntity("Bullet");
+    auto& c_animation = bullet->add<CAnimation>(m_game->assets().getAnimation(m_playerConfig.WEAPON), true);
+    bullet->add<CTransform>(entity_transform.pos, Vec2f(float(m_playerConfig.SPEED) * 2 * direction, 0), Vec2f(1,1), 0);
+    // sf::Vector2u texture_size = c_animation.animation.getSprite().getTexture()->getSize();
+    // bullet->add<CBoundingBox>(Vec2f(texture_size.x, texture_size.y));
+
 }
 
 void Scene_Play::update()
 {
     m_entityManager.update();
 
-    // // TODO: implement pause functionality
+    if (!m_paused)
+    {
+        sMovement();
+        SLifespan();
+        sCollision();
+        sAnimation();
+        sGUI();
+    }
 
-    sMovement();
-    sGravity();
-    SLifespan();
-    sCollision();
-    sAnimation();
-    sGUI();
     sRender();
 }
 
 void Scene_Play::sMovement()
 {
-    // TODO: Implement player movement/jumping based on its CInput component
-    // TODO: Implement gravity's effect on the player
-    // TODO: Implement the maximum player speed in both X and Y directions
+    
     // NOTE: Setting an entity's scale.x to -1/1 will make it face to the left/right
     // setting velocity
     if (m_player->has<CInput>())
     {
+        auto& transform = m_player->get<CTransform>();
         auto& input = m_player->get<CInput>();
         Vec2f vel{0.0, 0.0};
         if (input.up)
         {
-            vel.y = -1;
+            if (input.canJump)
+            { 
+                vel.y = m_playerConfig.JUMP;
+                input.canJump = false;
+            }
         }
-        else if (input.down)
-        {
-            vel.y = 1;
-        }
-        else
-        {
-            vel.y = 0;
-        } 
 
+        if (input.down)
+        {
+            if (transform.pos.y - transform.prevPos.y < 0)
+            {
+                transform.velocity.y = 0.0f;
+            }
+            input.down = false;
+        }
+ 
         if (input.right)
         {
             vel.x = 1;
+            transform.scale.x = 1;
         }
         else if(input.left)
         {
             vel.x = -1;
+            transform.scale.x = -1;
         }
         else
         {
             vel.x = 0;
         }
 
-        auto& transform = m_player->get<CTransform>();
         transform.prevPos = transform.pos;
-        transform.velocity = vel.normalize() * m_playerConfig.SPEED;
-        // transform.velocity.y = vel.y * m_playerConfig.SPEED; 
-        transform.pos += transform.velocity; // TODO: clamp velocity.
+        transform.velocity.x = vel.x * m_playerConfig.SPEED;
+        float gravity = 0.0;
+        if (m_player->has<CGravity>())
+        {
+            gravity = m_player->get<CGravity>().gravity;
+        }
+        transform.velocity.y += vel.y + gravity;
+        transform.velocity.x = std::max<float>(-m_playerConfig.MAX_SPEED, std::min<float>(transform.velocity.x, m_playerConfig.MAX_SPEED));
+        transform.velocity.y = std::max<float>(-m_playerConfig.MAX_SPEED, std::min<float>(transform.velocity.y, m_playerConfig.MAX_SPEED));
+        transform.pos += transform.velocity;
         float left_bound = m_playerConfig.CX * 0.5;
         if (transform.pos.x < left_bound)
         {
@@ -185,20 +206,14 @@ void Scene_Play::sMovement()
         }
     }
 
+    for (auto entity : m_entityManager.getEntities("Bullet"))
+    {
+        auto& c_transform = entity->get<CTransform>();
+        c_transform.pos += c_transform.velocity;
+    }   
+
 }
 
-void Scene_Play::sGravity()
-{
-    
-    // for now just the player
-    if (m_player->has<CGravity>())
-    {
-        
-        auto& gravity_c = m_player->get<CGravity>();
-        auto& transform = m_player->get<CTransform>();
-        transform.velocity.y += gravity_c.gravity;
-    }
-}
 
 void Scene_Play::SLifespan()
 {
@@ -224,22 +239,22 @@ void Scene_Play::sCollision()
                     if ((player_transform.pos.y - player_transform.prevPos.y) > 0.0)
                     {
                         // top collision
-                        std::cout << "collision coming from" <<"Top" << "\n";
                         player_transform.pos.y += overlap.y;
-                        player_transform.velocity.y = 0.0; 
+                        player_transform.velocity.y = 0.0;
+                        m_player->get<CInput>().canJump = true; 
                     }
                     else
                     {
                         // bottom collision
                         player_transform.pos.y -= overlap.y;
-                        player_transform.velocity.y = 0.0;
                         if (entity->get<CAnimation>().animation.getName() == "Brick")
                         {
                             entity->destroy();
-                        }  
+                        }
+                        player_transform.velocity.y = 0.0;
                     }
                 }
-                
+
                 else if (previous_overlap.y < 0.0 && previous_overlap.x >= 0.0 ) 
                 {
                     if ((player_transform.pos.x - player_transform.prevPos.x) > 0.0)
@@ -273,6 +288,11 @@ void Scene_Play::sDoAction(const Action &action)
         {
             m_drawGrid = !m_drawGrid;
         }
+        else if (action.name() == "TOGGLE_TEXTURE")
+        {
+            m_drawTextures = !m_drawTextures;
+        }
+
         else if (action.name() == "PAUSE")
         {
             setPaused(!m_paused); // this comes from the base class
@@ -284,21 +304,27 @@ void Scene_Play::sDoAction(const Action &action)
 
 
         // player movement
-        else if (action.name() == "JUMP")
+        if (action.name() == "JUMP")
         {
             m_player->get<CInput>().up = true;
         }
-        else if (action.name() == "MOVE_DOWN")
-        {
-            m_player->get<CInput>().down = true;
-        }
-        else if (action.name() == "MOVE_LEFT")
+        
+        if (action.name() == "MOVE_LEFT")
         {
             m_player->get<CInput>().left = true;
         }
-        else if (action.name() == "MOVE_RIGHT")
+        
+        if (action.name() == "MOVE_RIGHT")
         {
             m_player->get<CInput>().right = true;
+        }
+        
+        if (action.name() == "SHOOT")
+        {
+            if (m_player->get<CInput>().canShoot)
+                spawnBullet(m_player);
+            m_player->get<CInput>().canShoot = false;
+            
         }
     }
     else if (action.type() == "END")
@@ -306,18 +332,21 @@ void Scene_Play::sDoAction(const Action &action)
         if (action.name() == "JUMP")
         {
             m_player->get<CInput>().up = false;
+            m_player->get<CInput>().down = true;
         }
-        else if (action.name() == "MOVE_DOWN")
-        {
-            m_player->get<CInput>().down = false;
-        }
-        else if (action.name() == "MOVE_LEFT")
+        
+        if (action.name() == "MOVE_LEFT")
         {
             m_player->get<CInput>().left = false;
         }
-        else if (action.name() == "MOVE_RIGHT")
+        if (action.name() == "MOVE_RIGHT")
         {
             m_player->get<CInput>().right = false;
+        }
+
+        if (action.name() == "SHOOT")
+        {
+            m_player->get<CInput>().canShoot = true;
         }
     }
 }
@@ -329,8 +358,6 @@ void Scene_Play::sAnimation()
 
 void Scene_Play::onEnd()
 {
-    // TODO: when the scene ends, change back to the MENU scene
-    // use m_game->changeScene(correct params);
     m_game->changeScene( "MENU", std::make_shared<Scene_Menu>(m_game),true);
 }
 

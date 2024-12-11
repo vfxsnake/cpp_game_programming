@@ -21,10 +21,10 @@ Texture TexPoleTop images/mario/PoleTop.png
 Texture TexFlag images/mario/Flag.png
 Texture TexQuestion images/mario/question.png
 Texture TexBlock images/mario/block.png
+Animation Buster TexBuster 1 0
 Animation Stand TexStand 1 0
 Animation Run TexRun 3 10
 Animation Air TexAir 1 0 
-Animation Buster TexBuster 1 0
 Animation Explosion TexExplode 12 6
 Animation Coin TexCoin 6 5
 Animation Shutting TexShutting 1 0
