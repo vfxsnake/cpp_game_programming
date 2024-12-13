@@ -30,9 +30,12 @@ public:
 
     void update()
     {
-        m_currentFrame++;
-        // TODO: calculate the correct frame of the animation based on the current frame
-        // set the texture rectangle properly
+        if (m_speed > 0 && m_frameCount > 1)
+        {
+            int update_rate = (m_currentFrame / m_speed) % m_frameCount;
+            m_sprite.setTextureRect(sf::IntRect((int)floor(float(update_rate) * m_size.x), 0, (int)m_size.x, (int)m_size.y));
+            m_currentFrame++;
+        }
     }
 
     bool hasEnded() const

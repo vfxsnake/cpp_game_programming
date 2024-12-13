@@ -25,7 +25,7 @@ void Scene_Play::init(const std::string& levelPath)
     registerAction(sf::Keyboard::Space, "JUMP");
     registerAction(sf::Keyboard::Left, "MOVE_LEFT");
     registerAction(sf::Keyboard::Right, "MOVE_RIGHT");
-    registerAction(sf::Keyboard::C, "SHOOT");
+    registerAction(sf::Keyboard::V, "SHOOT");
 
 
     // TODO register all other game play actions.
@@ -108,11 +108,11 @@ void Scene_Play::loadLevel(const std::string& filename)
 void Scene_Play::spawnPlayer()
 {
     m_player = m_entityManager.addEntity("Player");
-    m_player->add<CAnimation>(m_game->assets().getAnimation("Stand"), true);
+    m_player->add<CAnimation>(m_game->assets().getAnimation("Air"), true);
     m_player->add<CTransform>(gridToMidPixel(m_playerConfig.X, m_playerConfig.Y, m_player));
 
     m_player->add<CBoundingBox>(Vec2f(m_playerConfig.CX, m_playerConfig.CY));
-    m_player->add<CState>("stand");
+    m_player->add<CState>("jumping");
     m_player->add<CInput>();
     m_player->add<CGravity>(m_playerConfig.GRAVITY);
 }
@@ -124,8 +124,8 @@ void Scene_Play::spawnBullet(std::shared_ptr<Entity> entity)
     auto bullet = m_entityManager.addEntity("Bullet");
     auto& c_animation = bullet->add<CAnimation>(m_game->assets().getAnimation(m_playerConfig.WEAPON), true);
     bullet->add<CTransform>(entity_transform.pos, Vec2f(float(m_playerConfig.SPEED) * 2 * direction, 0), Vec2f(1,1), 0);
-    // sf::Vector2u texture_size = c_animation.animation.getSprite().getTexture()->getSize();
-    // bullet->add<CBoundingBox>(Vec2f(texture_size.x, texture_size.y));
+    bullet->add<CBoundingBox>(c_animation.animation.getSize());
+    bullet->add<CLifespan>(60, 0);
 
 }
 
@@ -154,6 +154,7 @@ void Scene_Play::sMovement()
     {
         auto& transform = m_player->get<CTransform>();
         auto& input = m_player->get<CInput>();
+        auto& state = m_player->get<CState>();
         Vec2f vel{0.0, 0.0};
         if (input.up)
         {
@@ -162,6 +163,8 @@ void Scene_Play::sMovement()
                 vel.y = m_playerConfig.JUMP;
                 input.canJump = false;
             }
+            state.state = "jumping";
+            
         }
 
         if (input.down)
@@ -171,17 +174,22 @@ void Scene_Play::sMovement()
                 transform.velocity.y = 0.0f;
             }
             input.down = false;
+            state.state = "jumping";
         }
  
         if (input.right)
         {
             vel.x = 1;
             transform.scale.x = 1;
+            if (state.state != "jumping")
+                state.state = "running";
         }
         else if(input.left)
         {
             vel.x = -1;
             transform.scale.x = -1;
+            if (state.state != "jumping")
+                state.state = "running";
         }
         else
         {
@@ -217,31 +225,46 @@ void Scene_Play::sMovement()
 
 void Scene_Play::SLifespan()
 {
-    // TODO: Check lifespan of entities the have them, and destroy them if the go over
+    for (auto bullet : m_entityManager.getEntities("Bullet"))
+    {
+        if (bullet->has<CLifespan>())
+        {
+            auto& c_lifespan = bullet->get<CLifespan>();
+            if(c_lifespan.lifespan);
+            {
+                if ((c_lifespan.lifespan - c_lifespan.frameCreated) <= 0)
+                {
+                    bullet->destroy();
+                }
+                c_lifespan.frameCreated ++;
+            }
+        }
+    }
 }
 
 void Scene_Play::sCollision()
 {   
-    // collision of tiles and the player
     for (auto& entity : m_entityManager.getEntities("Tile"))
     {
         if (entity->has<CBoundingBox>())
         {
-            
+            // collision of tiles and the player
             Vec2f overlap = Physics::GetOverlap(entity, m_player);
             if (overlap.x < 0.0f && overlap.y < 0.0f) // if both negatives theres a collision.
             {
                 auto previous_overlap = Physics::GetPreviousOverlap(entity, m_player);
                 auto& player_transform = m_player->get<CTransform>(); 
 
-                if (previous_overlap.x < 0.0 && previous_overlap. y >= 0)
+                if (previous_overlap.x < 0.0 && previous_overlap.y >= 0)
                 {
                     if ((player_transform.pos.y - player_transform.prevPos.y) > 0.0)
                     {
                         // top collision
                         player_transform.pos.y += overlap.y;
                         player_transform.velocity.y = 0.0;
-                        m_player->get<CInput>().canJump = true; 
+                        m_player->get<CInput>().canJump = true;
+                        if (m_player->get<CState>().state != "running" || player_transform.velocity.x == 0.0f)
+                            m_player->get<CState>().state = "stand";
                     }
                     else
                     {
@@ -252,6 +275,7 @@ void Scene_Play::sCollision()
                             entity->destroy();
                         }
                         player_transform.velocity.y = 0.0;
+
                     }
                 }
 
@@ -270,6 +294,27 @@ void Scene_Play::sCollision()
                         player_transform.velocity.x = 0.0;
                     }
                 }
+                else
+                {
+                    std::cout << "previous overlap x: " << previous_overlap.x << " " << "previous overlap y:" << previous_overlap.y <<"\n";
+                }
+
+                continue; // the entity has been destroyed continue next iteration.
+            }
+
+            // collision with bullets
+            for (auto& bullet : m_entityManager.getEntities("Bullet"))
+            {
+                overlap = Physics::GetOverlap(entity, bullet);
+                if (overlap.x < 0.0f && overlap.y < 0.0f)
+                {
+                    if (entity->get<CAnimation>().animation.getName() == "Brick")
+                    {
+                        entity->destroy();
+                    }
+                    bullet->destroy();
+                }
+
             }
         }
     }
@@ -353,7 +398,32 @@ void Scene_Play::sDoAction(const Action &action)
 
 void Scene_Play::sAnimation()
 {
-    // TODO: Complete the Animation class code first
+    for (auto& entity : m_entityManager.getEntities())
+    {
+        if (entity->has<CAnimation>())
+        {
+            auto& c_animation = entity->get<CAnimation>();
+            if (entity->tag() == "Player")
+            {
+                auto& c_state = entity->get<CState>();
+                if (c_state.state == "jumping")
+                {
+                    c_animation.animation = m_game->assets().getAnimation("Air");
+                } 
+                else if (c_state.state == "running")
+                {
+                    if (c_animation.animation.getName() != "Run")
+                        c_animation.animation = m_game->assets().getAnimation("Run");
+                }
+                else
+                {
+                    c_animation.animation = m_game->assets().getAnimation("Stand");
+                }
+            }
+
+            c_animation.animation.update();
+        }
+    }
 }
 
 void Scene_Play::onEnd()
