@@ -27,9 +27,6 @@ void Scene_Play::init(const std::string& levelPath)
     registerAction(sf::Keyboard::Right, "MOVE_RIGHT");
     registerAction(sf::Keyboard::V, "SHOOT");
 
-
-    // TODO register all other game play actions.
-
     m_gridText.setCharacterSize(12);
     m_gridText.setFont(m_game->assets().getFont("Tech"));
     loadLevel(levelPath);
@@ -212,6 +209,13 @@ void Scene_Play::sMovement()
         {
             transform.pos.x = left_bound;
         }
+
+        if (transform.pos.y > (m_game->window().getSize().y) + m_playerConfig.CY * 0.5)
+        {
+            m_player->destroy();
+            spawnPlayer();
+            return;
+        }
     }
 
     for (auto entity : m_entityManager.getEntities("Bullet"))
@@ -252,6 +256,12 @@ void Scene_Play::sCollision()
             Vec2f overlap = Physics::GetOverlap(entity, m_player);
             if (overlap.x < 0.0f && overlap.y < 0.0f) // if both negatives theres a collision.
             {
+                if (entity->get<CAnimation>().animation.getName() == "Pole")
+                {
+                    m_player->destroy();
+                    spawnPlayer();
+                    return;
+                }
                 auto previous_overlap = Physics::GetPreviousOverlap(entity, m_player);
                 auto& player_transform = m_player->get<CTransform>(); 
 
@@ -272,9 +282,12 @@ void Scene_Play::sCollision()
                         player_transform.pos.y -= overlap.y;
                         if (entity->get<CAnimation>().animation.getName() == "Brick")
                         {
-                            entity->destroy();
+                            entity->get<CAnimation>().animation = m_game->assets().getAnimation("Explosion");
+                            entity->get<CAnimation>().repeat = false;
+                            entity->get<CBoundingBox>().exists = false;
                         }
                         player_transform.velocity.y = 0.0;
+                        continue;
 
                     }
                 }
@@ -296,11 +309,11 @@ void Scene_Play::sCollision()
                 }
                 else
                 {
+                    std::cout << "overlap x: " << overlap.x << " " << "overlap y:" << overlap.y <<"\n";
                     std::cout << "previous overlap x: " << previous_overlap.x << " " << "previous overlap y:" << previous_overlap.y <<"\n";
                 }
-
-                continue; // the entity has been destroyed continue next iteration.
             }
+
 
             // collision with bullets
             for (auto& bullet : m_entityManager.getEntities("Bullet"))
@@ -310,7 +323,9 @@ void Scene_Play::sCollision()
                 {
                     if (entity->get<CAnimation>().animation.getName() == "Brick")
                     {
-                        entity->destroy();
+                        entity->get<CAnimation>().animation = m_game->assets().getAnimation("Explosion");
+                        entity->get<CAnimation>().repeat = false;
+                        entity->get<CBoundingBox>().exists = false;
                     }
                     bullet->destroy();
                 }
@@ -422,6 +437,11 @@ void Scene_Play::sAnimation()
             }
 
             c_animation.animation.update();
+
+            if (!c_animation.repeat && c_animation.animation.hasEnded())
+            {
+                entity->destroy();
+            }
         }
     }
 }

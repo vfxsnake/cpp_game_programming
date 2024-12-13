@@ -7,7 +7,6 @@ namespace Physics
     // see collision class...
     Vec2f GetOverlap(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b)
     {
-        // TODO return the overlap rectangle size of the bounding intersection.
         if (a->has<CBoundingBox>() && b->has<CBoundingBox>())
         {
             auto& a_bbox = a->get<CBoundingBox>();
@@ -26,7 +25,7 @@ namespace Physics
 
     Vec2f GetPreviousOverlap(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b)
     {
-        // TODO return the overlap rectangle size of the bounding intersection.
+
         if (a->has<CBoundingBox>() && b->has<CBoundingBox>())
         {
             auto& a_bbox = a->get<CBoundingBox>();

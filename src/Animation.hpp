@@ -40,7 +40,10 @@ public:
 
     bool hasEnded() const
     {
-        // detect when animation has ended (last frame was played) and return true.
+        if (m_currentFrame > m_frameCount)
+        {
+            return true;
+        }
         return false;
     }
 
