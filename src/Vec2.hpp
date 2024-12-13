@@ -114,6 +114,10 @@ public:
         return Vec2(x / magnitude(), y / magnitude());
     }
 
+    float dot(const Vec2& v)
+    {
+        return x * v.x + y * v.y;
+    }
 };
 
 using Vec2f = Vec2<float>;  // similar to a macro a way to aliases a Vec2f float easily.

@@ -52,6 +52,7 @@ public:
         {
             removeDeadEntities(entityVec);
         }
+        
     }
 
     std::shared_ptr<Entity> addEntity(const std::string& tag)

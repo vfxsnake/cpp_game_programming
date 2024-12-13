@@ -1,11 +1,10 @@
 #include <SFML/Graphics.hpp>
-#include <fstream>
 
-#include "Game.h"
+#include "GameEngine.h"
 
 
-int main(int argc, char* argv[])
+int main()
 {
-        Game g("config.txt");
+        GameEngine g("assets.txt");
         g.run();
 }
