@@ -1,46 +1,52 @@
-#pragma once
+#ifndef GAME_ENGINE_H
+#define GAME_ENGINE_H
+
 #include <map>
 #include <memory>
+#include "SFML/Graphics/RenderWindow.hpp"
 
-#include <SFML/Graphics.hpp> 
-#include "Assets.hpp"
-
-// forward declarations
-class Scene;
+#include "Scene.h"
+#include "Assets.h"
 
 
-using SceneMap = std::map<std::string, std::shared_ptr<Scene>>;
+typedef std::map<std::string, std::shared_ptr<Scene>> SceneMap;
 
-
-class GameEngine : public std::enable_shared_from_this<GameEngine>
-{
-private:
+class GameEngine {
+protected:
     sf::RenderWindow m_window;
+    sf::Clock m_deltaClock;
     Assets m_assets;
     std::string m_currentScene;
     SceneMap m_sceneMap;
     size_t m_simulationSpeed = 1;
     bool m_running = true;
-    sf::Clock m_deltaClock;
 
-    void init(const std::string& path);
+    void init(const std::string &path);
+
     void update();
+
     void sUserInput();
+
     std::shared_ptr<Scene> currentScene();
-    
+
 public:
+    explicit GameEngine(const std::string &path);
 
-    GameEngine(const std::string& path);
-    
-    void changeScene(const std::string &path, std::shared_ptr<Scene> scene, bool endCurrentScene = false);
-    
+    void changeScene(const std::string &sceneName, std::shared_ptr<Scene> scene, bool endCurrentScene = false);
+
     void quit();
-    
-    void run();
-    
-    sf::RenderWindow& window();
 
-    const Assets& assets() const;
+    void run();
+
+    void playSound(const std::string &soundName);
+
+    void stopSound(const std::string &soundName);
+
+    sf::RenderWindow &window();
+
+    Assets &assets();
 
     bool isRunning();
 };
+
+#endif //GAME_ENGINE_H
